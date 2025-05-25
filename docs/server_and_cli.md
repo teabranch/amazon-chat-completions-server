@@ -143,10 +143,10 @@ OPENAI_API_KEY="your-openai-key"       # Required for OpenAI
 AWS_ACCESS_KEY_ID="your-key-id"
 AWS_SECRET_ACCESS_KEY="your-secret-key"
 # Option 2: AWS Profile
-AWS_PROFILE_NAME="your-profile"        # Alternative to static credentials
+AWS_PROFILE="your-profile"        # Alternative to static credentials
 
 # Required for AWS Bedrock
-AWS_REGION_NAME="us-east-1"            # Required for Bedrock
+AWS_REGION="us-east-1"            # Required for Bedrock
 ```
 
 ### 6. API Documentation

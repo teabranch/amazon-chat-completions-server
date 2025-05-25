@@ -122,6 +122,10 @@ class LLMServiceFactory:
         logger.info(f"LLMServiceFactory: Requesting service for model_id '{model_id}'.")
         # Simple heuristic (expand this list or use a more robust mapping)
         # Ensure this list is comprehensive for known model prefixes/patterns.
+        
+        provider = None
+        model_id_parts = model_id.split('.')
+
         if model_id.startswith("gpt-") or \
            model_id.startswith("text-") or \
            "openai" in model_id.lower() or \
@@ -134,7 +138,11 @@ class LLMServiceFactory:
              model_id.startswith("meta.") or \
              "bedrock" in model_id.lower():
             provider = "bedrock"
-        else:
+        elif len(model_id_parts) > 1 and model_id_parts[1] in ["anthropic", "ai21", "cohere", "amazon", "meta"]:
+            # Handles cases like 'us.anthropic.claude...' or ARNs that might include these
+            provider = "bedrock"
+        
+        if provider is None:
             # Fallback or error if provider cannot be determined
             logger.warning(
                 f"Could not reliably determine provider for model '{model_id}'. Attempting to use 'openai' as a default. This may fail."

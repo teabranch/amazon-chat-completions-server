@@ -53,8 +53,8 @@ class AppConfig:
         self.AWS_ACCESS_KEY_ID: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID")
         self.AWS_SECRET_ACCESS_KEY: Optional[str] = os.getenv("AWS_SECRET_ACCESS_KEY")
         self.AWS_SESSION_TOKEN: Optional[str] = os.getenv("AWS_SESSION_TOKEN") # For temporary credentials
-        self.AWS_REGION_NAME: Optional[str] = os.getenv("AWS_REGION_NAME")
-        self.AWS_PROFILE_NAME: Optional[str] = os.getenv("AWS_PROFILE_NAME") # New: for profile-based auth
+        self.AWS_REGION: Optional[str] = os.getenv("AWS_REGION")
+        self.AWS_PROFILE: Optional[str] = os.getenv("AWS_PROFILE") # New: for profile-based auth
 
         # Application Configuration
         self.LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -86,23 +86,23 @@ class AppConfig:
             logger.warning("OPENAI_API_KEY is not set. OpenAI functionalities will be unavailable.")
 
         aws_static_keys_present = self.AWS_ACCESS_KEY_ID and self.AWS_SECRET_ACCESS_KEY
-        aws_profile_present = bool(self.AWS_PROFILE_NAME)
+        aws_profile_present = bool(self.AWS_PROFILE)
         
         if not (aws_static_keys_present or aws_profile_present):
             logger.warning(
                 "Neither AWS static credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) "
-                "nor AWS_PROFILE_NAME are set. AWS Bedrock functionalities will be unavailable "
+                "nor AWS_PROFILE are set. AWS Bedrock functionalities will be unavailable "
                 "unless the environment is configured for IAM role instance profile or other implicit auth."
             )
         elif aws_static_keys_present and aws_profile_present:
             logger.info(
-                "Both AWS static credentials and AWS_PROFILE_NAME are set. "
+                "Both AWS static credentials and AWS_PROFILE are set. "
                 "Static credentials will take precedence if used directly by Boto3 session before client creation."
                 " APIClient logic will prioritize static keys, then profile, then default Boto3 chain."
             )
 
-        if (aws_static_keys_present or aws_profile_present) and not self.AWS_REGION_NAME:
-            logger.warning("AWS credentials/profile are set, but AWS_REGION_NAME is not. Bedrock calls may fail or use default region.")
+        if (aws_static_keys_present or aws_profile_present) and not self.AWS_REGION:
+            logger.warning("AWS credentials/profile are set, but AWS_REGION is not. Bedrock calls may fail or use default region.")
         
         # If neither OpenAI nor AWS is configured for any use:
         if not self.OPENAI_API_KEY and not (aws_static_keys_present or aws_profile_present) :

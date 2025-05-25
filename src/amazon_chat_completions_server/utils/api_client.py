@@ -63,14 +63,14 @@ _bedrock_runtime_client = None
 
 def get_bedrock_runtime_client():
     global _bedrock_runtime_client
-    if not (app_config.AWS_ACCESS_KEY_ID and app_config.AWS_SECRET_ACCESS_KEY and app_config.AWS_REGION_NAME):
+    if not (app_config.AWS_ACCESS_KEY_ID and app_config.AWS_SECRET_ACCESS_KEY and app_config.AWS_REGION):
         logger.warning("AWS credentials or region not fully configured. Bedrock client may not be initialized or may fail.")
         # Depending on how boto3 handles missing creds (e.g. IAM roles), this might still work in some envs
     if _bedrock_runtime_client is None:
         try:
             _bedrock_runtime_client = boto3.client(
                 service_name='bedrock-runtime',
-                region_name=app_config.AWS_REGION_NAME,
+                region_name=app_config.AWS_REGION,
                 aws_access_key_id=app_config.AWS_ACCESS_KEY_ID or None, # Pass None if empty to allow boto3 to use other credential sources
                 aws_secret_access_key=app_config.AWS_SECRET_ACCESS_KEY or None
             )
@@ -82,7 +82,7 @@ def get_bedrock_runtime_client():
             # except ClientError as e:
             #     logger.error(f"Bedrock client initialized, but connectivity test failed: {e}. Check permissions and AWS configuration.")
             #     # Depending on severity, you might want to set _bedrock_runtime_client to None here
-            logger.info(f"Bedrock runtime client initialized for region: {app_config.AWS_REGION_NAME}")
+            logger.info(f"Bedrock runtime client initialized for region: {app_config.AWS_REGION}")
         except Exception as e: # Catches potential boto3 setup errors beyond ClientError
             logger.error(f"Failed to initialize Bedrock runtime client: {e}")
             _bedrock_runtime_client = None # Ensure it's None if init fails
@@ -111,13 +111,13 @@ class APIClient:
             
             # Check for AWS credentials and region
             static_keys_present = self.app_config.AWS_ACCESS_KEY_ID and self.app_config.AWS_SECRET_ACCESS_KEY
-            profile_name_present = bool(self.app_config.AWS_PROFILE_NAME)
-            region_present = bool(self.app_config.AWS_REGION_NAME)
+            profile_name_present = bool(self.app_config.AWS_PROFILE)
+            region_present = bool(self.app_config.AWS_REGION)
 
             if not region_present:
                 # Log a warning but proceed; Boto3 might pick up region from shared config or env var AWS_DEFAULT_REGION
                 logger.warning(
-                    "AWS_REGION_NAME is not set in AppConfig. Boto3 will attempt to find it in the environment "
+                    "AWS_REGION is not set in AppConfig. Boto3 will attempt to find it in the environment "
                     "or shared AWS config. Bedrock calls may fail if region is not discoverable."
                 )
 
@@ -125,41 +125,41 @@ class APIClient:
                 # This check is important because Boto3 can sometimes pick up credentials from other sources
                 # (e.g. EC2 instance profile, ECS task role). We want to be explicit if no config is provided via .env
                 logger.warning(
-                    "Neither AWS static credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) nor AWS_PROFILE_NAME "
+                    "Neither AWS static credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) nor AWS_PROFILE "
                     "are set in AppConfig. Boto3 will attempt to find credentials using its default chain "
                     "(e.g., environment variables, shared credentials file, IAM roles)."
                 )
                 # Attempt to create a session without explicit creds, relying on Boto3's default credential resolution.
-                session = boto3.Session(region_name=self.app_config.AWS_REGION_NAME)
+                session = boto3.Session(region_name=self.app_config.AWS_REGION)
             elif static_keys_present:
                 logger.info("Using static AWS credentials (key ID and secret key) for Bedrock client.")
                 session = boto3.Session(
                     aws_access_key_id=self.app_config.AWS_ACCESS_KEY_ID,
                     aws_secret_access_key=self.app_config.AWS_SECRET_ACCESS_KEY,
                     aws_session_token=self.app_config.AWS_SESSION_TOKEN, # Will be None if not set, which is fine
-                    region_name=self.app_config.AWS_REGION_NAME
+                    region_name=self.app_config.AWS_REGION
                 )
             elif profile_name_present: # Static keys not present, but profile name is
-                logger.info(f"Using AWS profile '{self.app_config.AWS_PROFILE_NAME}' for Bedrock client.")
+                logger.info(f"Using AWS profile '{self.app_config.AWS_PROFILE}' for Bedrock client.")
                 try:
                     session = boto3.Session(
-                        profile_name=self.app_config.AWS_PROFILE_NAME,
-                        region_name=self.app_config.AWS_REGION_NAME
+                        profile_name=self.app_config.AWS_PROFILE,
+                        region_name=self.app_config.AWS_REGION
                     )
                     # Test credentials by getting caller identity to fail early if profile is bad
                     sts_client = session.client("sts")
                     sts_client.get_caller_identity()
-                    logger.info(f"Successfully initialized session with AWS profile '{self.app_config.AWS_PROFILE_NAME}'.")
+                    logger.info(f"Successfully initialized session with AWS profile '{self.app_config.AWS_PROFILE}'.")
                 except (botocore.exceptions.ProfileNotFound, botocore.exceptions.NoCredentialsError, botocore.exceptions.ClientError) as e:
                     logger.error(
-                        f"Failed to initialize Boto3 session with profile '{self.app_config.AWS_PROFILE_NAME}'. Error: {e}. "
+                        f"Failed to initialize Boto3 session with profile '{self.app_config.AWS_PROFILE}'. Error: {e}. "
                         "Falling back to Boto3 default credential resolution chain."
                     )
                     # Fallback to default session if profile fails
-                    session = boto3.Session(region_name=self.app_config.AWS_REGION_NAME)
+                    session = boto3.Session(region_name=self.app_config.AWS_REGION)
             else: # Should not be reached due to outer conditional, but as a safeguard
                 logger.info("Unexpected credential state. Falling back to default Boto3 session initialization for Bedrock.")
-                session = boto3.Session(region_name=self.app_config.AWS_REGION_NAME)
+                session = boto3.Session(region_name=self.app_config.AWS_REGION)
 
             try:
                 self.bedrock_runtime_client = session.client(

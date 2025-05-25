@@ -30,7 +30,7 @@ class BedrockAdapter(BaseLLMAdapter):
         super().__init__(self.specific_bedrock_model_id, **kwargs) # Initialize BaseLLMAdapter with the specific ID
         
         self.api_client = APIClient()
-        if not (app_config.AWS_ACCESS_KEY_ID and app_config.AWS_SECRET_ACCESS_KEY and app_config.AWS_REGION_NAME):
+        if not (app_config.AWS_ACCESS_KEY_ID and app_config.AWS_SECRET_ACCESS_KEY and app_config.AWS_REGION):
             # APIClient also checks this, but good to have an early check here too.
             raise ConfigurationError("AWS credentials or region not configured for BedrockAdapter.")
 

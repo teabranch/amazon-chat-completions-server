@@ -5,10 +5,8 @@ This guide explains how to use the Amazon Chat Completions Server library in you
 ## 1. Prerequisites
 
 * Python 3.12+
-
 * Installed dependencies (see `pyproject.toml` or `requirements.txt` if generated).
    You can install with `uv pip install .` in the project root.
-
 * A `.env` file in your project root with the necessary API keys and configurations. See [.env.example](../../.env.example) for the template.
 
 Example `.env` content for **OpenAI and AWS Bedrock (using static keys)**:
@@ -17,7 +15,7 @@ Example `.env` content for **OpenAI and AWS Bedrock (using static keys)**:
 OPENAI_API_KEY="sk-your_openai_api_key"
 AWS_ACCESS_KEY_ID="your_aws_access_key_id"
 AWS_SECRET_ACCESS_KEY="your_aws_secret_access_key"
-AWS_REGION_NAME="us-east-1"
+AWS_REGION="us-east-1"
 LOG_LEVEL="INFO"
 ```
 
@@ -25,8 +23,8 @@ Example `.env` content for **OpenAI and AWS Bedrock (using an AWS profile)**:
 
 ```env
 OPENAI_API_KEY="sk-your_openai_api_key"
-AWS_PROFILE_NAME="your_bedrock_profile"
-AWS_REGION_NAME="us-east-1"
+AWS_PROFILE="your_bedrock_profile"
+AWS_REGION="us-east-1"
 LOG_LEVEL="INFO"
 ```
 

@@ -17,11 +17,11 @@ BEDROCK_CONFIGURED = AWS_PROFILE_IS_SET and AWS_REGION_IS_SET
 
 # Default Bedrock model for testing - Anthropic Claude 3 Haiku
 # Ensure this model is enabled in your AWS account for the specified region.
-TEST_BEDROCK_CLAUDE_MODEL = os.getenv("TEST_BEDROCK_CLAUDE_MODEL", "anthropic.claude-3-7-sonnet-20250219-v1:0")
+TEST_BEDROCK_CLAUDE_MODEL = os.getenv("TEST_BEDROCK_CLAUDE_MODEL", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
 
 bedrock_integration_test = [
     pytest.mark.asyncio,
-    pytest.mark.skipif(not BEDROCK_CONFIGURED, reason="AWS_PROFILE_NAME and/or AWS_REGION_NAME not set, skipping Bedrock integration tests.")
+    pytest.mark.skipif(not BEDROCK_CONFIGURED, reason="AWS_PROFILE and/or AWS_REGION not set, skipping Bedrock integration tests.")
 ]
 
 @pytest.fixture(scope="module")
@@ -31,7 +31,7 @@ async def client():
         yield client
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not BEDROCK_CONFIGURED, reason="AWS_PROFILE_NAME and/or AWS_REGION_NAME not set, skipping Bedrock integration tests.")
+@pytest.mark.skipif(not BEDROCK_CONFIGURED, reason="AWS_PROFILE and/or AWS_REGION not set, skipping Bedrock integration tests.")
 async def test_bedrock_claude_chat_completion_non_streaming(client: TestClient):
     headers = {"X-API-Key": SERVER_API_KEY}
     payload = ChatCompletionRequest(
@@ -58,7 +58,7 @@ async def test_bedrock_claude_chat_completion_non_streaming(client: TestClient):
     assert choice["finish_reason"] in ["end_turn", "max_tokens", "stop_sequence"]
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not BEDROCK_CONFIGURED, reason="AWS_PROFILE_NAME and/or AWS_REGION_NAME not set, skipping Bedrock integration tests.")
+@pytest.mark.skipif(not BEDROCK_CONFIGURED, reason="AWS_PROFILE and/or AWS_REGION not set, skipping Bedrock integration tests.")
 async def test_bedrock_claude_chat_completion_streaming(client: TestClient):
     payload = {
         "api_key": SERVER_API_KEY, 

@@ -13,10 +13,10 @@ This class is central to making actual HTTP/S calls to the LLM provider APIs. It
     *   Lazily initializes and reuses `openai.AsyncOpenAI` and `boto3.client('bedrock-runtime')` clients.
     *   `get_openai_client`: Checks for `app_config.OPENAI_API_KEY`.
     *   `get_bedrock_runtime_client`: 
-        *   Checks for AWS configuration (`app_config.AWS_REGION_NAME` is essential).
+        *   Checks for AWS configuration (`app_config.AWS_REGION` is essential).
         *   Prioritizes authentication methods for Bedrock client creation in the following order:
             1.  Static Credentials: `app_config.AWS_ACCESS_KEY_ID` and `app_config.AWS_SECRET_ACCESS_KEY` (and optional `AWS_SESSION_TOKEN`).
-            2.  AWS Profile: `app_config.AWS_PROFILE_NAME` (uses the named profile from `~/.aws/credentials` or `~/.aws/config`).
+            2.  AWS Profile: `app_config.AWS_PROFILE` (uses the named profile from `~/.aws/credentials` or `~/.aws/config`).
             3.  Default Boto3 Chain: If neither static keys nor a profile name is provided, it relies on Boto3's default credential resolution chain (e.g., IAM instance profiles, ECS task roles, environment variables like `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` if set directly in the environment rather than `.env`).
         *   Raises `ConfigurationError` if essential configurations (like region, or if all auth methods fail) are missing or invalid.
 *   **Retry Logic (`tenacity`):**
@@ -39,7 +39,7 @@ This module is responsible for loading and providing access to application confi
 
 *   **`AppConfig` Class:**
     *   Loads environment variables from a `.env` file located in the project root (using `python-dotenv`). It also checks the current working directory for `.env` as a fallback.
-    *   Provides typed attributes for accessing configuration values (e.g., `app_config.OPENAI_API_KEY`, `app_config.AWS_REGION_NAME`, `app_config.AWS_PROFILE_NAME`, `app_config.DEFAULT_MAX_TOKENS_OPENAI`, `app_config.RETRY_MAX_ATTEMPTS`).
+    *   Provides typed attributes for accessing configuration values (e.g., `app_config.OPENAI_API_KEY`, `app_config.AWS_REGION`, `app_config.AWS_PROFILE`, `app_config.DEFAULT_MAX_TOKENS_OPENAI`, `app_config.RETRY_MAX_ATTEMPTS`).
     *   Includes default values for many settings if not found in the environment or `.env` file.
     *   Performs basic validation on initialization, logging warnings or errors for missing critical configurations. Checks for OpenAI key, and for AWS, it checks for either static keys OR a profile name along with the region.
 *   **`app_config` Instance:** A global instance of `AppConfig` is created when the module is imported, making configuration readily available throughout the library.

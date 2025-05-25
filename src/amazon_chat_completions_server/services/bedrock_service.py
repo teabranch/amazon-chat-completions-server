@@ -34,35 +34,35 @@ logger = logging.getLogger(__name__)
 
 # Helper to determine model provider from Bedrock model ID
 def get_provider_from_bedrock_model_id(model_id: str) -> str:
-    if model_id.startswith("anthropic."):
+    if model_id.startswith("anthropic.") or model_id.startswith("us.anthropic."):
         return "anthropic"
-    elif model_id.startswith("ai21."):
+    elif model_id.startswith("ai21.") or model_id.startswith("us.ai21."):
         return "ai21"
-    elif model_id.startswith("cohere."):
+    elif model_id.startswith("cohere.") or model_id.startswith("us.cohere."):
         return "cohere"
-    elif model_id.startswith("meta."):
+    elif model_id.startswith("meta.") or model_id.startswith("us.meta."):
         return "meta"
-    elif model_id.startswith("amazon."):
+    elif model_id.startswith("amazon.") or model_id.startswith("us.amazon."):
         return "amazon"
     return "unknown_bedrock_provider"
 
 class BedrockService(AbstractLLMService):
-    def __init__(self, aws_region_name: Optional[str] = None, aws_profile_name: Optional[str] = None, **kwargs):
-        self.aws_region_name = aws_region_name or os.getenv("AWS_REGION_NAME")
-        self.aws_profile_name = aws_profile_name or os.getenv("AWS_PROFILE_NAME")
+    def __init__(self, AWS_REGION: Optional[str] = None, AWS_PROFILE: Optional[str] = None, **kwargs):
+        self.AWS_REGION = AWS_REGION or os.getenv("AWS_REGION")
+        self.AWS_PROFILE = AWS_PROFILE or os.getenv("AWS_PROFILE")
         
-        if not self.aws_region_name:
-            logger.warning("AWS_REGION_NAME not provided or found in environment. Bedrock calls may fail or use default region.")
+        if not self.AWS_REGION:
+            logger.warning("AWS_REGION not provided or found in environment. Bedrock calls may fail or use default region.")
             # It might still work if a default region is configured in AWS environment/profile.
             # However, explicit configuration is better.
 
         try:
-            if self.aws_profile_name:
-                logger.info(f"Creating boto3 session with profile: {self.aws_profile_name} and region: {self.aws_region_name}")
-                session = boto3.Session(profile_name=self.aws_profile_name, region_name=self.aws_region_name)
+            if self.AWS_PROFILE:
+                logger.info(f"Creating boto3 session with profile: {self.AWS_PROFILE} and region: {self.AWS_REGION}")
+                session = boto3.Session(profile_name=self.AWS_PROFILE, region_name=self.AWS_REGION)
             else:
-                logger.info(f"Creating boto3 session with default credentials and region: {self.aws_region_name}")
-                session = boto3.Session(region_name=self.aws_region_name)
+                logger.info(f"Creating boto3 session with default credentials and region: {self.AWS_REGION}")
+                session = boto3.Session(region_name=self.AWS_REGION)
             
             # Test credentials early by trying to get caller identity
             sts_client = session.client("sts")
@@ -133,7 +133,7 @@ class BedrockService(AbstractLLMService):
 
     async def _invoke_anthropic_claude_stream(self, model_id: str, bedrock_payload: Dict[str, Any]) -> AsyncGenerator[ChatCompletionChunk, None]:
         try:
-            response_stream_iterator = await asyncio.to_thread(
+            response_stream = await asyncio.to_thread(
                 self.bedrock_runtime_client.invoke_model_with_response_stream,
                 modelId=model_id,
                 body=json.dumps(bedrock_payload)
@@ -142,8 +142,11 @@ class BedrockService(AbstractLLMService):
             chunk_id_prefix = f"chatcmpl-br-{int(time.time())}"
             chunk_index = 0
             
-            async for event_wrapper in asyncio.to_thread(lambda: response_stream_iterator["body"]):
-                event = event_wrapper # Assuming the to_thread handles iteration transparently if body is an iterable
+            # Get the body stream
+            event_stream = response_stream["body"]
+            
+            # Process events from the stream
+            for event in event_stream:
                 chunk_data = json.loads(event["chunk"]["bytes"])
                 delta_content = ""
                 finish_reason = None
@@ -176,9 +179,13 @@ class BedrockService(AbstractLLMService):
                 if finish_reason:
                     logger.debug(f"Bedrock stream for {model_id} finished with reason: {finish_reason}")
                     break
+
+            # Ensure we close the stream
+            event_stream.close()
+
         except ClientError as e:
             self._handle_bedrock_client_error(e, model_id)
-        except Exception as e: # Catch-all for other errors during streaming (e.g., JSON parsing)
+        except Exception as e:
             logger.error(f"Error processing Bedrock (Claude Stream) response for {model_id}: {e}")
             raise StreamingError(f"Error during Bedrock stream processing for {model_id}: {str(e)}")
 
@@ -257,7 +264,7 @@ class BedrockService(AbstractLLMService):
             raise ServiceModelNotFoundError(f"Provider '{provider}' for Bedrock model '{model_id}' is not supported or model is invalid.")
 
     async def list_models(self) -> List[ModelProviderInfo]:
-        logger.info(f"BedrockService: Fetching foundation models from Bedrock region: {self.aws_region_name}")
+        logger.info(f"BedrockService: Fetching foundation models from Bedrock region: {self.AWS_REGION}")
         all_bedrock_models = []
         try:
             paginator = self.bedrock_client.get_paginator('list_foundation_models')
@@ -275,7 +282,7 @@ class BedrockService(AbstractLLMService):
             return all_bedrock_models
         except ClientError as e:
             # Handle specific errors like AccessDeniedException if needed for list_models
-            logger.error(f"Bedrock API error listing models: {e}. Ensure Bedrock model access is enabled in region {self.aws_region_name}.")
+            logger.error(f"Bedrock API error listing models: {e}. Ensure Bedrock model access is enabled in region {self.AWS_REGION}.")
             self._handle_bedrock_client_error(e, "list_foundation_models") # Reuses handler, model_id is just for logging context
             return [] # Or re-raise as appropriate
         except Exception as e:
