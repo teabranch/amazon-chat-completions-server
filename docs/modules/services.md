@@ -1,4 +1,4 @@
-# Services (`src.llm_integrations.services`)
+# Services (`src.amazon_chat_completions_server.services`)
 
 The service layer provides a high-level, consistent interface for client applications to interact with LLMs, abstracting away the underlying provider and adapter details.
 

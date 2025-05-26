@@ -29,7 +29,7 @@ async def run_openai_example():
 
         # Non-streaming example
         logger.info("OpenAI Non-Streaming Request:")
-        response = await openai_service.chat_completion(messages=messages, max_tokens=50)
+        response = await openai_service.chat_completion(model_id="gpt-4o-mini", messages=messages, max_tokens=50)
         if response.choices and response.choices[0].message:
             logger.info(f"OpenAI Response (Non-Stream): {response.choices[0].message.content}")
             logger.info(f"OpenAI Usage: {response.usage}")
@@ -39,7 +39,7 @@ async def run_openai_example():
         # Streaming example
         logger.info("\nOpenAI Streaming Request:")
         full_streamed_content = ""
-        async for chunk in await openai_service.chat_completion(messages=messages, max_tokens=60, stream=True):
+        async for chunk in await openai_service.chat_completion(model_id="gpt-4o-mini", messages=messages, max_tokens=60, stream=True):
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 print(chunk.choices[0].delta.content, end="", flush=True)
                 full_streamed_content += chunk.choices[0].delta.content
@@ -60,8 +60,8 @@ async def run_bedrock_claude_example():
         logger.warning("AWS credentials not configured. Skipping Bedrock Claude example.")
         return
     try:
-        # model_id can be generic like "claude-3-haiku" or specific like "anthropic.claude-3-haiku-20240307-v1:0"
-        bedrock_claude_service = LLMServiceFactory.get_service("bedrock", model_id="claude-3-haiku") 
+        # model_id can be generic like "us.anthropic.claude-3-5-haiku-20241022-v1:0" or specific like "anthropic.us.anthropic.claude-3-5-haiku-20241022-v1:0-20240307-v1:0"
+        bedrock_claude_service = LLMServiceFactory.get_service("bedrock", model_id="us.anthropic.claude-3-5-haiku-20241022-v1:0") 
 
         messages = [
             Message(role="system", content="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair."),
@@ -70,7 +70,7 @@ async def run_bedrock_claude_example():
 
         # Non-streaming example
         logger.info("Bedrock Claude Non-Streaming Request:")
-        response = await bedrock_claude_service.chat_completion(messages=messages, max_tokens=150, temperature=0.7)
+        response = await bedrock_claude_service.chat_completion(model_id="us.anthropic.claude-3-5-haiku-20241022-v1:0", messages=messages, max_tokens=150, temperature=0.7)
         if response.choices and response.choices[0].message:
             logger.info(f"Bedrock Claude Response (Non-Stream):\n{response.choices[0].message.content}")
             logger.info(f"Bedrock Claude Usage: {response.usage}")
@@ -80,7 +80,7 @@ async def run_bedrock_claude_example():
         # Streaming example
         logger.info("\nBedrock Claude Streaming Request:")
         full_streamed_content = ""
-        async for chunk in await bedrock_claude_service.chat_completion(messages=messages, max_tokens=160, temperature=0.7, stream=True):
+        async for chunk in await bedrock_claude_service.chat_completion(model_id="us.anthropic.claude-3-5-haiku-20241022-v1:0", messages=messages, max_tokens=160, temperature=0.7, stream=True):
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 print(chunk.choices[0].delta.content, end="", flush=True)
                 full_streamed_content += chunk.choices[0].delta.content
@@ -101,7 +101,7 @@ async def run_bedrock_titan_example():
         logger.warning("AWS credentials not configured. Skipping Bedrock Titan example.")
         return
     try:
-        bedrock_titan_service = LLMServiceFactory.get_service("bedrock", model_id="titan-text-express-v1")
+        bedrock_titan_service = LLMServiceFactory.get_service("bedrock", model_id="amazon.titan-text-express-v1")
 
         messages = [
             # Titan strategy formats system prompt as part of inputText
@@ -111,7 +111,7 @@ async def run_bedrock_titan_example():
 
         # Non-streaming example
         logger.info("Bedrock Titan Non-Streaming Request:")
-        response = await bedrock_titan_service.chat_completion(messages=messages, max_tokens=100)
+        response = await bedrock_titan_service.chat_completion(model_id="amazon.titan-text-express-v1", messages=messages, max_tokens=100)
         if response.choices and response.choices[0].message:
             logger.info(f"Bedrock Titan Response (Non-Stream): {response.choices[0].message.content}")
             logger.info(f"Bedrock Titan Usage: {response.usage}")
@@ -121,7 +121,7 @@ async def run_bedrock_titan_example():
         # Streaming example
         logger.info("\nBedrock Titan Streaming Request:")
         full_streamed_content = ""
-        async for chunk in await bedrock_titan_service.chat_completion(messages=messages, max_tokens=120, stream=True):
+        async for chunk in await bedrock_titan_service.chat_completion(model_id="amazon.titan-text-express-v1", messages=messages, max_tokens=120, stream=True):
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 print(chunk.choices[0].delta.content, end="", flush=True)
                 full_streamed_content += chunk.choices[0].delta.content
@@ -154,6 +154,6 @@ async def main():
 if __name__ == "__main__":
     # To run this main.py directly for testing:
     # Ensure you are in the project root directory and run:
-    # python -m src.llm_integrations.main
+    # python -m src.amazon_chat_completions_server.main
     # Make sure .env file is in the project root.
     asyncio.run(main()) 

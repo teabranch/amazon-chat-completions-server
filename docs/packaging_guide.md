@@ -73,7 +73,7 @@ Key sections to review and update:
 
 *   **CLI Scripts (`[project.scripts]`)**:
     *   Ensure this correctly defines the entry point for your CLI.
-    *   Example: `amazon-chat = "src.llm_integrations.cli.main:cli"` (This seems correct based on your current structure).
+    *   Example: `amazon-chat = "src.amazon_chat_completions_server.cli.main:cli"` (This seems correct based on your current structure).
 
 *   **Build System (`[build-system]`)**:
     *   Specify the build backend and its requirements.

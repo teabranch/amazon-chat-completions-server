@@ -1,4 +1,4 @@
-# Core Modules (`src.llm_integrations.core`)
+# Core Modules (`src.amazon_chat_completions_server.core`)
 
 The `core` module forms the foundation of the library, providing essential data structures and custom exceptions.
 

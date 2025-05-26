@@ -156,7 +156,7 @@ class BedrockTitanResponse(BaseModel):
 
 # The following ModelProviderInfo might be useful for the service factory or model listing logic.
 class ModelProviderInfo(BaseModel):
-    id: str # The model ID recognized by the API (e.g., "gpt-4o-mini", "anthropic.claude-3-haiku-20240307-v1:0")
+    id: str # The model ID recognized by the API (e.g., "gpt-4o-mini", "anthropic.us.anthropic.claude-3-5-haiku-20241022-v1:0-20240307-v1:0")
     provider: str # e.g., "openai", "bedrock"
     display_name: Optional[str] = None # A user-friendly name
     # Add other relevant details, e.g., if it supports streaming, context window size etc. 

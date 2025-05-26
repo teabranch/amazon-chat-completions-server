@@ -142,7 +142,7 @@ class TitanStrategy(BedrockAdapterStrategy):
         )
 
     async def handle_stream_chunk(self, chunk_data: Dict[str, Any], original_request: ChatCompletionRequest, response_id: str, created_timestamp: int) -> ChatCompletionChunk:
-        # Titan stream chunk structure (for text models like titan-text-express-v1):
+        # Titan stream chunk structure (for text models like amazontitan-text-express-v1):
         # {"outputText": "...", "index": 0, "totalOutputTextTokenCount": N, "completionReason": "...", "amazon-bedrock-invocationMetrics": {...}}
         delta_content = chunk_data.get("outputText")
         finish_reason = None

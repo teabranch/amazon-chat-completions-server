@@ -1,4 +1,4 @@
-# Utilities (`src.llm_integrations.utils`)
+# Utilities (`src.amazon_chat_completions_server.utils`)
 
 The `utils` module provides shared functionalities like API communication, configuration management, and logging setup.
 

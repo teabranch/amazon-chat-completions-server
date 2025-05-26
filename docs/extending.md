@@ -9,7 +9,7 @@ If AWS Bedrock adds support for a new family of models (e.g., a new provider or 
 **Steps:**
 
 1.  **Create a New Strategy Class:**
-    *   In `src/llm_integrations/adapters/bedrock/`, create a new Python file (e.g., `new_model_strategy.py`).
+    *   In `src/amazon_chat_completions_server/adapters/bedrock/`, create a new Python file (e.g., `new_model_strategy.py`).
     *   Define a class (e.g., `NewModelStrategy`) that inherits from `BedrockAdapterStrategy` (from `bedrock_adapter_strategy_abc.py`).
     *   Implement all the abstract methods:
         *   `__init__(self, model_id: str, get_default_param_func: callable)`
@@ -19,7 +19,7 @@ If AWS Bedrock adds support for a new family of models (e.g., a new provider or 
     *   You may need to override `_map_finish_reason` if the model uses different stop reason codes.
 
 2.  **Update `BedrockAdapter`:**
-    *   Open `src/llm_integrations/adapters/bedrock/bedrock_adapter.py`.
+    *   Open `src/amazon_chat_completions_server/adapters/bedrock/bedrock_adapter.py`.
     *   Import your new strategy: `from .new_model_strategy import NewModelStrategy`.
     *   In the `_get_strategy` method, add a condition to instantiate your new strategy if the `bedrock_model_id` matches the prefix for the new model family.
         ```python
@@ -29,12 +29,12 @@ If AWS Bedrock adds support for a new family of models (e.g., a new provider or 
         ```
 
 3.  **Update Model Mapping (Optional but Recommended):**
-    *   Open `src/llm_integrations/adapters/bedrock/bedrock_models.py`.
+    *   Open `src/amazon_chat_completions_server/adapters/bedrock/bedrock_models.py`.
     *   Add any user-friendly generic names for the new models to the `BEDROCK_MODEL_ID_MAP`.
     *   Add the new model prefixes/IDs to `SUPPORTED_BEDROCK_MODELS` if you want them to be listed as supported.
 
 4.  **Add Default Configuration (Optional):**
-    *   In `src/llm_integrations/utils/config_loader.py` (`AppConfig` class) and `.env.example`, add any default parameters specific to this new model family (e.g., `DEFAULT_MAX_TOKENS_NEWMODEL`, `DEFAULT_TEMPERATURE_NEWMODEL`). The `_get_default_param` method in `BaseLLMAdapter` will then be able to pick these up if the provider prefix in its logic is updated or generalized.
+    *   In `src/amazon_chat_completions_server/utils/config_loader.py` (`AppConfig` class) and `.env.example`, add any default parameters specific to this new model family (e.g., `DEFAULT_MAX_TOKENS_NEWMODEL`, `DEFAULT_TEMPERATURE_NEWMODEL`). The `_get_default_param` method in `BaseLLMAdapter` will then be able to pick these up if the provider prefix in its logic is updated or generalized.
 
 5.  **Testing:**
     *   Write unit tests for your new strategy, mocking Bedrock API responses.
@@ -54,18 +54,17 @@ The current static map provides a curated and predictable list of supported mode
 If you want to add support for an entirely new LLM provider (e.g., Google Gemini, Cohere directly, etc.):
 
 1.  **Create a New Adapter:**
-    *   In `src/llm_integrations/adapters/`, create a new Python file (e.g., `newprovider_adapter.py`).
+    *   In `src/amazon_chat_completions_server/adapters/`, create a new Python file (e.g., `newprovider_adapter.py`).
     *   Define a class (e.g., `NewProviderAdapter`) that inherits from `BaseLLMAdapter`.
     *   Implement all the abstract methods from `BaseLLMAdapter` to handle request/response conversion and (a)synchronous chat completions for the new provider.
     *   This adapter will likely need to interact with the `APIClient` or use its own client library for the new provider.
 
 2.  **Update `APIClient` (If Necessary):**
-    *   If the new provider requires specific API call logic, authentication, or error handling not covered by generic HTTP calls, you might need to add new methods or configurations to `src/llm_integrations/utils/api_client.py`.
+    *   If the new provider requires specific API call logic, authentication, or error handling not covered by generic HTTP calls, you might need to add new methods or configurations to `src/amazon_chat_completions_server/utils/api_client.py`.
     *   Add any new provider-specific exceptions to `core.exceptions.py` and map them in the `APIClient`.
 
 3.  **Create a New Concrete Service:**
-    *   In `src/llm_integrations/services/concrete_services.py`, define a new service class (e.g., `NewProviderService`) that inherits from `ConcreteLLMService` (or directly from `AbstractLLMService` if `ConcreteLLMService` is not suitable).
-    *   This service will be initialized with your new adapter.
+    *   In `src/amazon_chat_completions_server/services/concrete_services.py`, define a new service class (e.g., `NewProviderService`) that inherits from `ConcreteLLMService` (or directly from `AbstractLLMService` if `ConcreteLLMService` is not suitable).
         ```python
         # In concrete_services.py
         class NewProviderService(ConcreteLLMService):
@@ -77,7 +76,7 @@ If you want to add support for an entirely new LLM provider (e.g., Google Gemini
         ```
 
 4.  **Update `LLMServiceFactory`:**
-    *   Open `src/llm_integrations/services/llm_service_factory.py`.
+    *   Open `src/amazon_chat_completions_server/services/llm_service_factory.py`.
     *   Import your new adapter and service.
     *   In the `get_service` method, add a new condition for `provider_name`:
         ```python

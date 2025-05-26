@@ -1,4 +1,4 @@
-# Adapters (`src.llm_integrations.adapters`)
+# Adapters (`src.amazon_chat_completions_server.adapters`)
 
 The adapter layer is responsible for bridging the gap between the library's standardized interface (`ChatCompletionRequest`, `ChatCompletionResponse`) and the specific APIs of different LLM providers.
 
@@ -32,7 +32,7 @@ See [OpenAI Adapter Details](openai_adapter.md) for more.
 
 This adapter implements `BaseLLMAdapter` for AWS Bedrock. Due to the variety of model APIs available through Bedrock, this adapter utilizes the **Strategy Pattern** to handle different model families.
 
-*   **Model ID Resolution:** Uses `get_bedrock_model_id` from `bedrock_models.py` to map a generic model name (e.g., "claude-3-haiku") to its specific Bedrock model ID (e.g., "anthropic.claude-3-haiku-20240307-v1:0").
+*   **Model ID Resolution:** Uses `get_bedrock_model_id` from `bedrock_models.py` to map a generic model name (e.g., "us.anthropic.claude-3-5-haiku-20241022-v1:0") to its specific Bedrock model ID (e.g., "anthropic.us.anthropic.claude-3-5-haiku-20241022-v1:0-20240307-v1:0").
 *   **Strategy Selection:** Based on the Bedrock model ID prefix (e.g., `anthropic.claude`, `amazon.titan`), it instantiates the appropriate model strategy (e.g., `ClaudeStrategy`, `TitanStrategy`).
 *   **Delegation:** All conversion and processing logic (request/response mapping, stream handling) is delegated to the selected strategy.
 *   Uses the `APIClient` to make calls to the Bedrock `invoke_model` or `invoke_model_with_response_stream` endpoints.

@@ -36,14 +36,14 @@ Most interactions will start with the `LLMServiceFactory` and the `Message` mode
 
 ```python
 import asyncio
-from src.llm_integrations.core.models import Message
-from src.llm_integrations.services.llm_service_factory import LLMServiceFactory
-from src.llm_integrations.core.exceptions import LLMIntegrationError, ConfigurationError
+from src.amazon_chat_completions_server.core.models import Message
+from src.amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
+from src.amazon_chat_completions_server.core.exceptions import LLMIntegrationError, ConfigurationError
 
 # The config_loader and logger_setup are typically imported by other modules,
 # so their setup is handled automatically when you import from the library.
 # For explicit setup if needed (usually not): 
-# from src.llm_integrations.utils import config_loader, logger_setup
+# from src.amazon_chat_completions_server.utils import config_loader, logger_setup
 ```
 
 ## 3. Getting an LLM Service
@@ -63,11 +63,11 @@ except ConfigurationError as e:
 # Ensure AWS credentials and region are in your .env
 try:
     # You can use generic model names defined in bedrock_models.py or specific Bedrock model ARNs/IDs.
-    bedrock_claude_service = LLMServiceFactory.get_service(provider_name="bedrock", model_id="claude-3-haiku")
+    bedrock_claude_service = LLMServiceFactory.get_service(provider_name="bedrock", model_id="us.anthropic.claude-3-5-haiku-20241022-v1:0")
     # Example with a more specific ID:
     # bedrock_claude_service = LLMServiceFactory.get_service(
     #     provider_name="bedrock", 
-    #     model_id="anthropic.claude-3-haiku-20240307-v1:0"
+    #     model_id="anthropic.us.anthropic.claude-3-5-haiku-20241022-v1:0-20240307-v1:0"
     # )
 except ConfigurationError as e:
     print(f"Bedrock Config Error: {e}")
@@ -75,7 +75,7 @@ except ConfigurationError as e:
 
 # For AWS Bedrock - Titan (e.g., Titan Text Express)
 try:
-    bedrock_titan_service = LLMServiceFactory.get_service(provider_name="bedrock", model_id="titan-text-express-v1")
+    bedrock_titan_service = LLMServiceFactory.get_service(provider_name="bedrock", model_id="amazon.titan-text-express-v1")
 except ConfigurationError as e:
     print(f"Bedrock Config Error: {e}")
     bedrock_titan_service = None

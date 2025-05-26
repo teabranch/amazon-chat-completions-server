@@ -34,15 +34,16 @@ logger = logging.getLogger(__name__)
 
 # Helper to determine model provider from Bedrock model ID
 def get_provider_from_bedrock_model_id(model_id: str) -> str:
-    if model_id.startswith("anthropic.") or model_id.startswith("us.anthropic."):
+    lower_model_id = model_id.lower()
+    if lower_model_id.startswith("anthropic.") or lower_model_id.startswith("us.anthropic.") or "claude" in lower_model_id:
         return "anthropic"
-    elif model_id.startswith("ai21.") or model_id.startswith("us.ai21."):
+    elif lower_model_id.startswith("ai21.") or lower_model_id.startswith("us.ai21.") or "jJurassic" in lower_model_id: # AI21 Jurassic
         return "ai21"
-    elif model_id.startswith("cohere.") or model_id.startswith("us.cohere."):
+    elif lower_model_id.startswith("cohere.") or lower_model_id.startswith("us.cohere.") or "command" in lower_model_id or "embed" in lower_model_id: # Cohere Command, Embed
         return "cohere"
-    elif model_id.startswith("meta.") or model_id.startswith("us.meta."):
+    elif lower_model_id.startswith("meta.") or lower_model_id.startswith("us.meta.") or "llama" in lower_model_id: # Meta Llama
         return "meta"
-    elif model_id.startswith("amazon.") or model_id.startswith("us.amazon."):
+    elif lower_model_id.startswith("amazon.") or lower_model_id.startswith("us.amazon.") or "titan" in lower_model_id:
         return "amazon"
     return "unknown_bedrock_provider"
 
@@ -130,6 +131,40 @@ class BedrockService(AbstractLLMService):
             if msg.role == "user" or msg.role == "assistant":
                 claude_messages.append({"role": msg.role, "content": msg.content})
         return claude_messages, system_prompt
+
+    def _prepare_amazon_titan_payload(self, messages: List[Message], temperature: Optional[float], max_tokens: Optional[int]) -> Dict[str, Any]:
+        # Titan models generally expect a single 'inputText' string.
+        # We'll concatenate messages, clearly delineating roles.
+        # System prompts are typically prepended.
+        prompt_parts = []
+        system_content = ""
+
+        for msg in messages:
+            if msg.role == "system":
+                # Titan doesn't have a separate system prompt field in the same way Claude v2+ does.
+                # Prepend system instructions to the main prompt.
+                system_content += msg.content + "\n\n" # Add some separation
+            elif msg.role == "user":
+                prompt_parts.append(f"User: {msg.content}")
+            elif msg.role == "assistant":
+                prompt_parts.append(f"Assistant: {msg.content}")
+            # Ignoring other roles for simplicity with Titan's simpler structure
+
+        input_text = system_content + "\n".join(prompt_parts)
+        
+        text_generation_config = {}
+        if max_tokens:
+            text_generation_config["maxTokenCount"] = max_tokens
+        else:
+            text_generation_config["maxTokenCount"] = 2048 # Default if not provided
+        if temperature is not None:
+            text_generation_config["temperature"] = temperature
+        # Titan also supports topP, stopSequences - not implemented here for brevity
+
+        return {
+            "inputText": input_text,
+            "textGenerationConfig": text_generation_config
+        }
 
     async def _invoke_anthropic_claude_stream(self, model_id: str, bedrock_payload: Dict[str, Any]) -> AsyncGenerator[ChatCompletionChunk, None]:
         try:
@@ -223,6 +258,116 @@ class BedrockService(AbstractLLMService):
             logger.error(f"Error processing Bedrock (Claude Non-Stream) response for {model_id}: {type(e).__name__} - {e}")
             raise ServiceApiError(f"Unexpected error processing Bedrock response for {model_id}: {type(e).__name__} - {str(e)}")
 
+    async def _invoke_amazon_titan_non_stream(self, model_id: str, bedrock_payload: Dict[str, Any]) -> ChatCompletionResponse:
+        try:
+            response = await asyncio.to_thread(
+                self.bedrock_runtime_client.invoke_model,
+                modelId=model_id,
+                body=json.dumps(bedrock_payload)
+            )
+            response_body = json.loads(response["body"].read().decode('utf-8'))
+
+            # Titan response structure:
+            # {
+            #   "inputTextTokenCount": number,
+            #   "results": [
+            #     {
+            #       "tokenCount": number,
+            #       "outputText": string,
+            #       "completionReason": string (e.g., "FINISH", "LENGTH")
+            #     }
+            #   ]
+            # }
+            
+            assistant_content = ""
+            finish_reason = None
+            
+            if response_body.get("results") and isinstance(response_body["results"], list) and len(response_body["results"]) > 0:
+                first_result = response_body["results"][0]
+                assistant_content = first_result.get("outputText", "")
+                finish_reason = first_result.get("completionReason")
+                if finish_reason == "FINISH":
+                    finish_reason = "stop"
+                elif finish_reason == "LENGTH":
+                    finish_reason = "length"
+                # Add other mappings if necessary, or leave as is if it's already a valid reason
+
+            return ChatCompletionResponse(
+                id=f"chatcmpl-br-titan-{int(time.time())}",
+                object="chat.completion",
+                created=int(time.time()),
+                model=model_id,
+                choices=[
+                    CoreChatCompletionChoice(
+                        index=0,
+                        message=Message(role="assistant", content=assistant_content),
+                        finish_reason=finish_reason
+                    )
+                ],
+                # Usage data can be extracted from response_body if needed
+                # usage={"prompt_tokens": response_body.get("inputTextTokenCount"), 
+                #        "completion_tokens": first_result.get("tokenCount") if first_result else 0}
+            )
+        except ClientError as e:
+            self._handle_bedrock_client_error(e, model_id)
+        except Exception as e:
+            logger.error(f"Error processing Bedrock (Titan Non-Stream) response for {model_id}: {type(e).__name__} - {e}")
+            raise ServiceApiError(f"Unexpected error processing Bedrock Titan response for {model_id}: {type(e).__name__} - {str(e)}")
+
+    async def _invoke_amazon_titan_stream(self, model_id: str, bedrock_payload: Dict[str, Any]) -> AsyncGenerator[ChatCompletionChunk, None]:
+        try:
+            response_stream = await asyncio.to_thread(
+                self.bedrock_runtime_client.invoke_model_with_response_stream,
+                modelId=model_id,
+                body=json.dumps(bedrock_payload)
+            )
+
+            chunk_id_prefix = f"chatcmpl-br-titan-{int(time.time())}"
+            chunk_index = 0
+            event_stream = response_stream["body"]
+
+            # Titan stream events:
+            # {"outputText": "...", "index": 0, "totalOutputTextTokenCount": null, "completionReason": null, "inputTextTokenCount": N}
+            # The last event might contain completionReason.
+            
+            for event in event_stream:
+                chunk_data = json.loads(event["chunk"]["bytes"].decode('utf-8'))
+                delta_content = chunk_data.get("outputText", "")
+                finish_reason = chunk_data.get("completionReason") # Often null until the end
+                if finish_reason == "FINISH":
+                    finish_reason = "stop"
+                elif finish_reason == "LENGTH":
+                    finish_reason = "length"
+                # Add other mappings if necessary
+
+                role = "assistant" # Titan output is always assistant
+
+                yield ChatCompletionChunk(
+                    id=f"{chunk_id_prefix}-{chunk_index}",
+                    object="chat.completion.chunk",
+                    created=int(time.time()),
+                    model=model_id,
+                    choices=[
+                        ChatCompletionChunkChoice(
+                            index=0, # Titan results are usually singular for text generation
+                            delta=ChoiceDelta(content=delta_content, role=role if delta_content or chunk_index == 0 else None),
+                            finish_reason=finish_reason
+                        )
+                    ]
+                )
+                chunk_index += 1
+                if finish_reason:
+                    logger.debug(f"Bedrock Titan stream for {model_id} finished with reason: {finish_reason}")
+                    break
+            
+            event_stream.close()
+
+        except ClientError as e:
+            self._handle_bedrock_client_error(e, model_id)
+        except Exception as e:
+            logger.error(f"Error processing Bedrock (Titan Stream) response for {model_id}: {e}")
+            raise StreamingError(f"Error during Bedrock Titan stream processing for {model_id}: {str(e)}")
+
     async def chat_completion(
         self,
         messages: List[Message],
@@ -258,6 +403,12 @@ class BedrockService(AbstractLLMService):
                 return self._invoke_anthropic_claude_stream(model_id, payload)
             else:
                 return await self._invoke_anthropic_claude_non_stream(model_id, payload)
+        elif provider == "amazon":
+            payload = self._prepare_amazon_titan_payload(messages, temperature, max_tokens)
+            if stream:
+                return self._invoke_amazon_titan_stream(model_id, payload)
+            else:
+                return await self._invoke_amazon_titan_non_stream(model_id, payload)
         else:
             logger.error(f"Unsupported Bedrock provider '{provider}' for model_id '{model_id}'.")
             # This should ideally be ServiceModelNotFoundError or a more specific "UnsupportedModelError"
