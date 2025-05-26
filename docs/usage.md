@@ -1,311 +1,547 @@
-# Usage Guide
+# Programming Guide
 
-This guide explains how to use the Amazon Chat Completions Server library in your Python projects.
+> 📚 **[← Back to Documentation Hub](README.md)** | **[Main README](../README.md)**
 
-## 1. Prerequisites
+This guide provides practical examples for using the Amazon Chat Completions Server library in your Python projects.
 
-* Python 3.12+
-* Installed dependencies (see `pyproject.toml` or `requirements.txt` if generated).
-   You can install with `uv pip install .` in the project root.
-* A `.env` file in your project root with the necessary API keys and configurations. See [.env.example](../../.env.example) for the template.
+## 📋 Table of Contents
 
-Example `.env` content for **OpenAI and AWS Bedrock (using static keys)**:
+- [Prerequisites](#prerequisites)
+- [Basic Usage](#basic-usage)
+- [Advanced Features](#advanced-features)
+- [Error Handling](#error-handling)
+- [Best Practices](#best-practices)
+
+## Prerequisites
+
+### Installation
+```bash
+# Install the package
+uv pip install -e .
+
+# Or with pip
+pip install -e .
+```
+
+### Configuration
+Create a `.env` file with your API credentials:
 
 ```env
+# Required
 OPENAI_API_KEY="sk-your_openai_api_key"
+API_KEY="your-server-api-key"
+
+# AWS Configuration (choose one method)
+# Method 1: Static credentials
 AWS_ACCESS_KEY_ID="your_aws_access_key_id"
 AWS_SECRET_ACCESS_KEY="your_aws_secret_access_key"
 AWS_REGION="us-east-1"
-LOG_LEVEL="INFO"
-```
 
-Example `.env` content for **OpenAI and AWS Bedrock (using an AWS profile)**:
-
-```env
-OPENAI_API_KEY="sk-your_openai_api_key"
-AWS_PROFILE="your_bedrock_profile"
+# Method 2: AWS Profile
+AWS_PROFILE="your_aws_profile"
 AWS_REGION="us-east-1"
+
+# Optional
+DEFAULT_OPENAI_MODEL="gpt-4o-mini"
 LOG_LEVEL="INFO"
 ```
 
-If using `AWS_PROFILE_NAME`, ensure the profile is correctly set up in your `~/.aws/credentials` or `~/.aws/config` file. If running in an AWS environment with an IAM instance profile or task role, you might only need `AWS_REGION_NAME` for Bedrock, as Boto3 will attempt to use the role credentials automatically.
+## Basic Usage
 
-## 2. Importing and Initialization
-
-Most interactions will start with the `LLMServiceFactory` and the `Message` model.
+### Getting Started with Services
 
 ```python
 import asyncio
 from src.amazon_chat_completions_server.core.models import Message
 from src.amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
-from src.amazon_chat_completions_server.core.exceptions import LLMIntegrationError, ConfigurationError
+from src.amazon_chat_completions_server.core.exceptions import LLMIntegrationError
 
-# The config_loader and logger_setup are typically imported by other modules,
-# so their setup is handled automatically when you import from the library.
-# For explicit setup if needed (usually not): 
-# from src.amazon_chat_completions_server.utils import config_loader, logger_setup
+# Get service instances
+openai_service = LLMServiceFactory.get_service(
+    provider_name="openai", 
+    model_id="gpt-4o-mini"
+)
+
+bedrock_service = LLMServiceFactory.get_service(
+    provider_name="bedrock", 
+    model_id="anthropic.claude-3-haiku-20240307-v1:0"
+)
 ```
 
-## 3. Getting an LLM Service
-
-Use the `LLMServiceFactory.get_service()` method to obtain a service instance for a specific provider and model.
+### Simple Chat Completion
 
 ```python
-# For OpenAI (e.g., GPT-4o mini)
-# Ensure OPENAI_API_KEY is in your .env
-try:
-    openai_service = LLMServiceFactory.get_service(provider_name="openai", model_id="gpt-4o-mini")
-except ConfigurationError as e:
-    print(f"OpenAI Config Error: {e}")
-    openai_service = None
-
-# For AWS Bedrock - Claude (e.g., Claude 3 Haiku)
-# Ensure AWS credentials and region are in your .env
-try:
-    # You can use generic model names defined in bedrock_models.py or specific Bedrock model ARNs/IDs.
-    bedrock_claude_service = LLMServiceFactory.get_service(provider_name="bedrock", model_id="us.anthropic.claude-3-5-haiku-20241022-v1:0")
-    # Example with a more specific ID:
-    # bedrock_claude_service = LLMServiceFactory.get_service(
-    #     provider_name="bedrock", 
-    #     model_id="anthropic.us.anthropic.claude-3-5-haiku-20241022-v1:0-20240307-v1:0"
-    # )
-except ConfigurationError as e:
-    print(f"Bedrock Config Error: {e}")
-    bedrock_claude_service = None
-
-# For AWS Bedrock - Titan (e.g., Titan Text Express)
-try:
-    bedrock_titan_service = LLMServiceFactory.get_service(provider_name="bedrock", model_id="amazon.titan-text-express-v1")
-except ConfigurationError as e:
-    print(f"Bedrock Config Error: {e}")
-    bedrock_titan_service = None
-```
-
-The factory caches service instances, so repeated calls with the same arguments will return the same instance.
-
-## 4. Making Chat Completion Requests
-
-Once you have a service instance, you can call the `chat_completion` method.
-
-### a) Non-Streaming Request
-
-```python
-async def make_non_streaming_request(service, service_name):
-    if not service:
-        print(f"Skipping non-streaming request for {service_name} as service is not available.")
-        return
-
+async def simple_chat():
     messages = [
         Message(role="system", content="You are a helpful assistant."),
-        Message(role="user", content="What is the weather like in London today?")
+        Message(role="user", content="What is the capital of France?")
     ]
 
+    # Non-streaming request
+    response = await openai_service.chat_completion(
+        messages=messages,
+        max_tokens=100,
+        temperature=0.7
+    )
+    
+    print(f"Response: {response.choices[0].message.content}")
+    print(f"Usage: {response.usage.total_tokens} tokens")
+
+# Run the example
+asyncio.run(simple_chat())
+```
+
+### Streaming Chat Completion
+
+```python
+async def streaming_chat():
+    messages = [
+        Message(role="user", content="Tell me a short story about a robot.")
+    ]
+
+    print("Response: ", end="")
+    async for chunk in openai_service.chat_completion(
+        messages=messages,
+        max_tokens=200,
+        temperature=0.8,
+        stream=True
+    ):
+        if chunk.choices and chunk.choices[0].delta.content:
+            print(chunk.choices[0].delta.content, end="", flush=True)
+    
+    print("\n--- Stream complete ---")
+
+asyncio.run(streaming_chat())
+```
+
+## Advanced Features
+
+### Tool Calling (Function Calling)
+
+```python
+async def tool_calling_example():
+    # Define tools
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get current weather for a location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "City name, e.g., 'London, UK'"
+                        },
+                        "unit": {
+                            "type": "string",
+                            "enum": ["celsius", "fahrenheit"],
+                            "description": "Temperature unit"
+                        }
+                    },
+                    "required": ["location"]
+                }
+            }
+        }
+    ]
+
+    messages = [
+        Message(role="user", content="What's the weather like in Tokyo?")
+    ]
+
+    response = await openai_service.chat_completion(
+        messages=messages,
+        tools=tools,
+        tool_choice="auto",
+        max_tokens=150
+    )
+
+    # Check if the model wants to call a tool
+    if response.choices[0].message.tool_calls:
+        tool_call = response.choices[0].message.tool_calls[0]
+        print(f"Tool called: {tool_call.function.name}")
+        print(f"Arguments: {tool_call.function.arguments}")
+        
+        # Simulate tool execution
+        tool_result = {"temperature": "22°C", "condition": "sunny"}
+        
+        # Add tool response to conversation
+        messages.extend([
+            response.choices[0].message,  # Assistant's tool call
+            Message(
+                role="tool",
+                content=str(tool_result),
+                tool_call_id=tool_call.id
+            )
+        ])
+        
+        # Get final response
+        final_response = await openai_service.chat_completion(
+            messages=messages,
+            max_tokens=100
+        )
+        print(f"Final response: {final_response.choices[0].message.content}")
+
+asyncio.run(tool_calling_example())
+```
+
+### Multimodal Content (Images)
+
+```python
+async def image_analysis():
+    # For models that support vision (like GPT-4o)
+    messages = [
+        Message(
+            role="user",
+            content=[
+                {"type": "text", "text": "What do you see in this image?"},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD..."
+                    }
+                }
+            ]
+        )
+    ]
+
+    response = await openai_service.chat_completion(
+        messages=messages,
+        model_id="gpt-4o",  # Vision-capable model
+        max_tokens=200
+    )
+    
+    print(f"Image analysis: {response.choices[0].message.content}")
+
+# asyncio.run(image_analysis())
+```
+
+### Multi-turn Conversations
+
+```python
+async def conversation_example():
+    conversation = [
+        Message(role="system", content="You are a helpful math tutor."),
+        Message(role="user", content="Can you help me with algebra?")
+    ]
+
+    # First exchange
+    response1 = await openai_service.chat_completion(
+        messages=conversation,
+        max_tokens=100
+    )
+    
+    conversation.append(response1.choices[0].message)
+    print(f"Assistant: {response1.choices[0].message.content}")
+
+    # Continue conversation
+    conversation.append(
+        Message(role="user", content="What is the quadratic formula?")
+    )
+
+    response2 = await openai_service.chat_completion(
+        messages=conversation,
+        max_tokens=150
+    )
+    
+    print(f"Assistant: {response2.choices[0].message.content}")
+
+asyncio.run(conversation_example())
+```
+
+## Error Handling
+
+### Comprehensive Error Handling
+
+```python
+from src.amazon_chat_completions_server.core.exceptions import (
+    LLMIntegrationError,
+    ConfigurationError,
+    APIConnectionError,
+    AuthenticationError,
+    RateLimitError,
+    ModelNotFoundError
+)
+
+async def robust_chat_completion():
     try:
-        print(f"\n--- {service_name} Non-Streaming Example ---")
+        service = LLMServiceFactory.get_service("openai", "gpt-4o-mini")
+        
+        messages = [
+            Message(role="user", content="Hello, world!")
+        ]
+        
         response = await service.chat_completion(
             messages=messages,
-            max_tokens=100,
+            max_tokens=100
+        )
+        
+        return response.choices[0].message.content
+        
+    except ConfigurationError as e:
+        print(f"Configuration error: {e}")
+        print("Check your .env file and API keys")
+        
+    except AuthenticationError as e:
+        print(f"Authentication failed: {e}")
+        print("Verify your API keys are correct")
+        
+    except RateLimitError as e:
+        print(f"Rate limit exceeded: {e}")
+        print("Wait before making more requests")
+        
+    except ModelNotFoundError as e:
+        print(f"Model not found: {e}")
+        print("Check if the model ID is correct")
+        
+    except APIConnectionError as e:
+        print(f"Connection error: {e}")
+        print("Check your internet connection")
+        
+    except LLMIntegrationError as e:
+        print(f"LLM integration error: {e}")
+        
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        
+    return None
+
+result = asyncio.run(robust_chat_completion())
+```
+
+### Retry Logic
+
+```python
+import asyncio
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10)
+)
+async def resilient_chat_completion(service, messages):
+    """Chat completion with automatic retries for transient errors."""
+    try:
+        return await service.chat_completion(
+            messages=messages,
+            max_tokens=100
+        )
+    except (APIConnectionError, RateLimitError) as e:
+        print(f"Retrying due to: {e}")
+        raise  # Re-raise to trigger retry
+    except (AuthenticationError, ModelNotFoundError) as e:
+        print(f"Non-retryable error: {e}")
+        return None  # Don't retry for these errors
+
+# Usage
+messages = [Message(role="user", content="Hello!")]
+response = await resilient_chat_completion(openai_service, messages)
+```
+
+## Best Practices
+
+### 1. Service Instance Management
+
+```python
+# ✅ Good: Reuse service instances
+class ChatBot:
+    def __init__(self):
+        self.service = LLMServiceFactory.get_service("openai", "gpt-4o-mini")
+    
+    async def chat(self, message: str) -> str:
+        messages = [Message(role="user", content=message)]
+        response = await self.service.chat_completion(messages=messages)
+        return response.choices[0].message.content
+
+# ❌ Avoid: Creating new services for each request
+async def bad_chat(message: str) -> str:
+    service = LLMServiceFactory.get_service("openai", "gpt-4o-mini")  # Inefficient
+    messages = [Message(role="user", content=message)]
+    response = await service.chat_completion(messages=messages)
+    return response.choices[0].message.content
+```
+
+### 2. Token Management
+
+```python
+async def token_aware_chat():
+    messages = [
+        Message(role="user", content="Write a long essay about AI.")
+    ]
+    
+    response = await openai_service.chat_completion(
+        messages=messages,
+        max_tokens=500,  # Set appropriate limits
+        temperature=0.7
+    )
+    
+    if response.usage:
+        print(f"Tokens used: {response.usage.total_tokens}")
+        if response.usage.total_tokens > 1000:
+            print("Warning: High token usage!")
+    
+    return response
+```
+
+### 3. Streaming for Long Responses
+
+```python
+async def efficient_long_response():
+    messages = [
+        Message(role="user", content="Explain quantum computing in detail.")
+    ]
+    
+    # Use streaming for long responses to improve perceived performance
+    full_response = ""
+    async for chunk in openai_service.chat_completion(
+        messages=messages,
+        max_tokens=1000,
+        stream=True
+    ):
+        if chunk.choices and chunk.choices[0].delta.content:
+            content = chunk.choices[0].delta.content
+            print(content, end="", flush=True)
+            full_response += content
+    
+    return full_response
+```
+
+### 4. Configuration Management
+
+```python
+from src.amazon_chat_completions_server.utils.config_loader import AppConfig
+
+# Access configuration
+config = AppConfig()
+
+# Use configuration in your application
+async def configured_chat():
+    model = config.DEFAULT_OPENAI_MODEL or "gpt-4o-mini"
+    service = LLMServiceFactory.get_service("openai", model)
+    
+    messages = [Message(role="user", content="Hello!")]
+    response = await service.chat_completion(messages=messages)
+    
+    return response
+```
+
+### 5. Logging
+
+```python
+import logging
+from src.amazon_chat_completions_server.utils.logger_setup import setup_logger
+
+# Set up logging
+logger = setup_logger(__name__)
+
+async def logged_chat_completion():
+    try:
+        logger.info("Starting chat completion request")
+        
+        messages = [Message(role="user", content="Hello!")]
+        response = await openai_service.chat_completion(messages=messages)
+        
+        logger.info(f"Chat completion successful, tokens: {response.usage.total_tokens}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Chat completion failed: {e}")
+        raise
+```
+
+## Complete Example
+
+Here's a complete example that demonstrates multiple features:
+
+```python
+import asyncio
+import logging
+from src.amazon_chat_completions_server.core.models import Message
+from src.amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
+from src.amazon_chat_completions_server.core.exceptions import LLMIntegrationError
+
+class ChatAssistant:
+    def __init__(self, provider="openai", model="gpt-4o-mini"):
+        self.service = LLMServiceFactory.get_service(provider, model)
+        self.conversation_history = []
+        self.logger = logging.getLogger(__name__)
+    
+    async def chat(self, user_message: str, stream: bool = False) -> str:
+        """Send a message and get a response."""
+        # Add user message to history
+        self.conversation_history.append(
+            Message(role="user", content=user_message)
+        )
+        
+        try:
+            if stream:
+                return await self._stream_response()
+            else:
+                return await self._get_response()
+                
+        except LLMIntegrationError as e:
+            self.logger.error(f"Chat error: {e}")
+            return f"Sorry, I encountered an error: {e}"
+    
+    async def _get_response(self) -> str:
+        """Get a non-streaming response."""
+        response = await self.service.chat_completion(
+            messages=self.conversation_history,
+            max_tokens=500,
             temperature=0.7
         )
         
-        if response.choices and response.choices[0].message:
-            print(f"Response from {service_name}: {response.choices[0].message.content}")
-            if response.usage:
-                print(f"Usage: Prompt Tokens={response.usage.prompt_tokens}, Completion Tokens={response.usage.completion_tokens}")
-        else:
-            print(f"Error: No valid response choices from {service_name}.")
-            
-    except LLMIntegrationError as e:
-        print(f"LLM Error with {service_name}: {e}")
-    except Exception as e:
-        print(f"Unexpected error with {service_name}: {e}")
-
-# Example calls:
-# if openai_service:
-#     asyncio.run(make_non_streaming_request(openai_service, "OpenAI"))
-# if bedrock_claude_service:
-#     asyncio.run(make_non_streaming_request(bedrock_claude_service, "Bedrock Claude"))
-```
-
-### b) Streaming Request
-
-```python
-async def make_streaming_request(service, service_name):
-    if not service:
-        print(f"Skipping streaming request for {service_name} as service is not available.")
-        return
-
-    messages = [
-        Message(role="system", content="You are a travel planning assistant."),
-        Message(role="user", content="Suggest three fun activities for a day trip to Paris.")
-    ]
-
-    try:
-        print(f"\n--- {service_name} Streaming Example ---")
-        print(f"Response from {service_name}: ", end="")
-        full_response_content = ""
+        assistant_message = response.choices[0].message
+        self.conversation_history.append(assistant_message)
         
-        async for chunk in service.chat_completion(
-            messages=messages,
-            max_tokens=200,
-            temperature=0.8,
+        return assistant_message.content
+    
+    async def _stream_response(self) -> str:
+        """Get a streaming response."""
+        full_response = ""
+        
+        async for chunk in self.service.chat_completion(
+            messages=self.conversation_history,
+            max_tokens=500,
+            temperature=0.7,
             stream=True
         ):
-            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                print(chunk.choices[0].delta.content, end="", flush=True)
-                full_response_content += chunk.choices[0].delta.content
-            if chunk.choices and chunk.choices[0].finish_reason:
-                print(f"\nStream finished. Reason: {chunk.choices[0].finish_reason}")
+            if chunk.choices and chunk.choices[0].delta.content:
+                content = chunk.choices[0].delta.content
+                print(content, end="", flush=True)
+                full_response += content
         
-        print(f"\nFull streamed content: {full_response_content}")
-        # Note: Usage information is typically not available per chunk in streaming or 
-        # might be in the final non-content chunk for some providers, or aggregated by the client if needed.
-        # The standard ChatCompletionChunk does not carry cumulative usage.
-
-    except LLMIntegrationError as e:
-        print(f"LLM Error with {service_name} streaming: {e}")
-    except Exception as e:
-        print(f"Unexpected error with {service_name} streaming: {e}")
-
-# Example calls:
-# if openai_service:
-#     asyncio.run(make_streaming_request(openai_service, "OpenAI"))
-# if bedrock_claude_service:
-#     asyncio.run(make_streaming_request(bedrock_claude_service, "Bedrock Claude"))
-```
-
-## 5. Tool Use (Function Calling)
-
-For models and providers that support tool use (like OpenAI and Claude 3).
-
-### a) Defining Tools
-
-Define your tools according to the OpenAI tool format:
-
-```python
-my_tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_current_weather",
-            "description": "Get the current weather in a given location",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {
-                        "type": "string",
-                        "description": "The city and state, e.g., San Francisco, CA",
-                    },
-                    "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]},
-                },
-                "required": ["location"],
-            },
-        },
-    }
-]
-```
-
-### b) Making a Request with Tools
-
-Pass the `tools` and optionally `tool_choice` parameters to `chat_completion`.
-
-```python
-async def make_tool_use_request(service, service_name):
-    if not service:
-        print(f"Skipping tool use request for {service_name} as service is not available.")
-        return
-
-    messages = [Message(role="user", content="What's the weather like in Boston?")]
-    
-    try:
-        print(f"\n--- {service_name} Tool Use Example ---")
-        response = await service.chat_completion(
-            messages=messages,
-            tools=my_tools,
-            tool_choice="auto" # Can be "auto", "none", or {"type": "function", "function": {"name": "my_function"}}
+        # Add to conversation history
+        self.conversation_history.append(
+            Message(role="assistant", content=full_response)
         )
+        
+        return full_response
+    
+    def clear_history(self):
+        """Clear conversation history."""
+        self.conversation_history = []
 
-        response_message = response.choices[0].message
+# Usage example
+async def main():
+    assistant = ChatAssistant()
+    
+    # Simple chat
+    response1 = await assistant.chat("Hello! What can you help me with?")
+    print(f"Assistant: {response1}")
+    
+    # Streaming chat
+    print("\nAssistant (streaming): ", end="")
+    response2 = await assistant.chat("Tell me a joke.", stream=True)
+    print()  # New line after streaming
+    
+    # Continue conversation
+    response3 = await assistant.chat("Can you explain that joke?")
+    print(f"Assistant: {response3}")
 
-        if response_message.tool_calls:
-            print(f"{service_name} requested tool call(s):")
-            available_functions = {"get_current_weather": lambda location, unit="fahrenheit": f"The weather in {location} is 70 {unit} and sunny."}
-            
-            # Extend messages with assistant's tool call request
-            messages.append(response_message) 
-
-            for tool_call in response_message.tool_calls:
-                function_name = tool_call.function.name
-                function_to_call = available_functions.get(function_name)
-                try:
-                    function_args = json.loads(tool_call.function.arguments)
-                    print(f"  Tool Call ID: {tool_call.id}, Function: {function_name}, Args: {function_args}")
-                    
-                    if function_to_call:
-                        function_response = function_to_call(
-                            location=function_args.get("location"),
-                            unit=function_args.get("unit", "fahrenheit") # Default unit
-                        )
-                        print(f"  Tool Response: {function_response}")
-                        # Extend messages with the tool response
-                        messages.append(
-                            Message(
-                                tool_call_id=tool_call.id,
-                                role="tool",
-                                name=function_name,
-                                content=function_response,
-                            )
-                        )
-                    else:
-                        print(f"  Error: Function {function_name} not found.")
-                        messages.append(Message(tool_call_id=tool_call.id, role="tool", name=function_name, content=f"Error: Function {function_name} not found"))
-
-                except json.JSONDecodeError:
-                    print(f"  Error: Could not decode arguments for {function_name}: {tool_call.function.arguments}")
-                    messages.append(Message(tool_call_id=tool_call.id, role="tool", name=function_name, content=f"Error: Invalid arguments format for {function_name}"))
-            
-            # Make a second call with the tool responses included
-            print(f"\n--- {service_name} Second Call with Tool Response ---")
-            second_response = await service.chat_completion(messages=messages)
-            if second_response.choices and second_response.choices[0].message.content:
-                print(f"Final response from {service_name}: {second_response.choices[0].message.content}")
-            else:
-                print(f"{service_name} did not provide a final content response after tool call.")
-
-        else:
-            print(f"{service_name} Response (no tool call): {response_message.content}")
-            
-    except LLMIntegrationError as e:
-        print(f"LLM Error with {service_name} tool use: {e}")
-    except Exception as e:
-        import traceback
-        print(f"Unexpected error with {service_name} tool use: {e}\n{traceback.format_exc()}")
-
-# Need to import json for the tool use example
-import json 
-
-# Example calls (OpenAI and Bedrock Claude 3 models typically support tools):
-# if openai_service:
-#     asyncio.run(make_tool_use_request(openai_service, "OpenAI"))
-# if bedrock_claude_service: 
-#     # Ensure the Bedrock Claude model chosen (e.g. Haiku, Sonnet, Opus) supports tools.
-#     # Titan models do not support this tool format directly via the adapter.
-#     if "claude" in bedrock_claude_service.adapter.model_id:
-#         asyncio.run(make_tool_use_request(bedrock_claude_service, "Bedrock Claude"))
-#     else:
-#         print("Skipping tool use for selected Bedrock model as it may not be Claude or support tools.")
-
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-__Note on Tool Use with Bedrock Titan:__
-The `TitanStrategy` currently does not support the OpenAI-style `tools` and `tool_choice` parameters. Interactions requiring tool-like behavior with Titan models would need to be formatted as part of the textual conversation prompt.
-
-## 6. Running the Examples
-
-The `src.llm_integrations.main` module provides runnable examples for OpenAI, Bedrock Claude, and Bedrock Titan, covering both streaming and non-streaming use cases. You can run it from the project root:
-
-```bash
-python -m src.amazon_chat_completions_server.main
-```
-
-Ensure your `.env` file is correctly set up in the project root before running.
+This programming guide provides practical examples for integrating the Amazon Chat Completions Server into your applications. For API server usage, see the [main README](../README.md) and [API Reference](api-reference.md).

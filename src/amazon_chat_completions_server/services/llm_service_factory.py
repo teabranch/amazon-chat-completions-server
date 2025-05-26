@@ -8,6 +8,7 @@ from ..adapters.base_adapter import BaseLLMAdapter
 from ..adapters.openai_adapter import OpenAIAdapter
 from ..adapters.bedrock.bedrock_adapter import BedrockAdapter
 from ..adapters.bedrock.bedrock_models import get_bedrock_model_id, SUPPORTED_BEDROCK_MODELS
+from ..adapters.bedrock_to_openai_adapter import BedrockToOpenAIAdapter
 from ..core.exceptions import ModelNotFoundError, ConfigurationError
 from .openai_service import OpenAIService
 from .bedrock_service import BedrockService
@@ -154,6 +155,88 @@ class LLMServiceFactory:
 
         logger.debug(f"Determined provider '{provider}' for model '{model_id}'.")
         return LLMServiceFactory.get_service(provider, model_id=model_id, **kwargs)
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def get_reverse_adapter(openai_model_id: str, **kwargs: Any) -> BedrockToOpenAIAdapter:
+        """
+        Creates a reverse integration adapter that accepts Bedrock format and routes to OpenAI.
+        
+        Args:
+            openai_model_id: The OpenAI model to use for processing (e.g., "gpt-4o-mini")
+            **kwargs: Additional configuration arguments
+            
+        Returns:
+            BedrockToOpenAIAdapter instance configured for the specified OpenAI model
+        """
+        logger.info(f"LLMServiceFactory: Creating reverse adapter for OpenAI model '{openai_model_id}'.")
+        return BedrockToOpenAIAdapter(openai_model_id=openai_model_id, **kwargs)
+
+    @staticmethod
+    def get_universal_service(
+        input_format: str,
+        output_format: str,
+        model_id: str,
+        **kwargs: Any
+    ) -> Any:
+        """
+        Creates a universal service that can handle format conversion between providers.
+        
+        Args:
+            input_format: Input format ("openai", "bedrock_claude", "bedrock_titan")
+            output_format: Output format ("openai", "bedrock")
+            model_id: Model ID to use for processing
+            **kwargs: Additional configuration arguments
+            
+        Returns:
+            Service instance capable of handling the specified format conversion
+        """
+        logger.info(f"LLMServiceFactory: Creating universal service for {input_format} → {output_format} with model '{model_id}'.")
+        
+        input_format_lower = input_format.lower()
+        output_format_lower = output_format.lower()
+        
+        if input_format_lower == "openai" and output_format_lower == "openai":
+            # Standard OpenAI processing
+            return LLMServiceFactory.get_service("openai", **kwargs)
+        
+        elif input_format_lower in ["bedrock_claude", "bedrock_titan"] and output_format_lower == "bedrock":
+            # Reverse integration: Bedrock → OpenAI → Bedrock
+            return LLMServiceFactory.get_reverse_adapter(model_id, **kwargs)
+        
+        elif input_format_lower == "openai" and output_format_lower == "bedrock":
+            # OpenAI input with Bedrock output
+            return LLMServiceFactory.get_reverse_adapter(model_id, **kwargs)
+        
+        elif input_format_lower in ["bedrock_claude", "bedrock_titan"] and output_format_lower == "openai":
+            # Bedrock input with OpenAI output (convert through reverse adapter then extract OpenAI response)
+            return LLMServiceFactory.get_service("openai", **kwargs)
+        
+        else:
+            raise ModelNotFoundError(f"Unsupported format conversion: {input_format} → {output_format}")
+
+    @staticmethod
+    def supports_reverse_integration() -> bool:
+        """Check if reverse integration is supported"""
+        return True
+
+    @staticmethod
+    def get_supported_input_formats() -> list:
+        """Get list of supported input formats"""
+        return ["openai", "bedrock_claude", "bedrock_titan"]
+
+    @staticmethod
+    def get_supported_output_formats() -> list:
+        """Get list of supported output formats"""
+        return ["openai", "bedrock"]
+
+    @staticmethod
+    def get_supported_models() -> Dict[str, list]:
+        """Get list of supported models by provider"""
+        return {
+            "openai": ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "gpt-4-turbo"],
+            "bedrock": ["claude-3-haiku", "claude-3-sonnet", "claude-3-opus", "titan-text-express"]
+        }
 
 # Example of how Concrete Services would make this cleaner:
 # if provider_name == "openai":

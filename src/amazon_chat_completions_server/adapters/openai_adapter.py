@@ -34,7 +34,7 @@ class OpenAIAdapter(BaseLLMAdapter):
         logger.info(f"OpenAIAdapter initialized for model: {self.model_id}")
 
     def convert_to_provider_request(self, request: ChatCompletionRequest) -> Dict[str, Any]:
-        """Converts a generic ChatCompletionRequest to the OpenAI-specific request format."""
+        """Converts a generic ChatCompletionRequest to an OpenAI-specific request payload."""
         provider_messages = []
         for msg in request.messages:
             provider_msg = {"role": msg.role, "content": msg.content}
@@ -48,8 +48,7 @@ class OpenAIAdapter(BaseLLMAdapter):
 
         payload = {
             "model": self.model_id, # Use the specific model_id for this adapter instance
-            "messages": provider_messages,
-            "stream": request.stream
+            "messages": provider_messages
         }
 
         # Add optional parameters if they are not None in the original request
@@ -86,54 +85,105 @@ class OpenAIAdapter(BaseLLMAdapter):
 
     def convert_from_provider_response(self, provider_response: Any, original_request: ChatCompletionRequest) -> ChatCompletionResponse:
         """Converts an OpenAI-specific response to a generic ChatCompletionResponse."""
-        # provider_response is a dictionary
-        if not provider_response.get('choices'):
-            raise LLMIntegrationError("OpenAI response did not contain 'choices'.")
-
-        choices_list = []
-        for choice in provider_response['choices']:
-            message_data = choice['message']
+        # Handle both dictionary and Pydantic model responses
+        if isinstance(provider_response, dict):
+            # Dictionary response
+            if not provider_response.get('choices'):
+                raise LLMIntegrationError("OpenAI response did not contain 'choices'.")
             
-            # Handle tool_calls if present
-            parsed_tool_calls = None
-            if message_data.get('tool_calls'):
-                parsed_tool_calls = [
-                    {
-                        "id": tc['id'],
-                        "type": tc['type'],
-                        "function": {"name": tc['function']['name'], "arguments": tc['function']['arguments']}
-                     } for tc in message_data['tool_calls']
-                ]
+            choices_list = []
+            for choice in provider_response['choices']:
+                message_data = choice['message']
+                
+                # Handle tool_calls if present
+                parsed_tool_calls = None
+                if message_data.get('tool_calls'):
+                    parsed_tool_calls = [
+                        {
+                            "id": tc['id'],
+                            "type": tc['type'],
+                            "function": {"name": tc['function']['name'], "arguments": tc['function']['arguments']}
+                         } for tc in message_data['tool_calls']
+                    ]
 
-            choices_list.append(
-                ChatCompletionChoice(
-                    message=Message(
-                        role=message_data.get('role', 'assistant'), 
-                        content=message_data.get('content', ''), # Ensure content is not None
-                        tool_calls=parsed_tool_calls
-                    ),
-                    finish_reason=choice.get('finish_reason'),
-                    index=choice.get('index')
+                choices_list.append(
+                    ChatCompletionChoice(
+                        message=Message(
+                            role=message_data.get('role') or 'assistant', 
+                            content=message_data.get('content') or '', # Ensure content is not None
+                            tool_calls=parsed_tool_calls
+                        ),
+                        finish_reason=choice.get('finish_reason'),
+                        index=choice.get('index')
+                    )
                 )
-            )
-        
-        usage_data = None
-        if provider_response.get('usage'):
-            usage_data = Usage(
-                prompt_tokens=provider_response['usage']['prompt_tokens'],
-                completion_tokens=provider_response['usage']['completion_tokens'],
-                total_tokens=provider_response['usage']['total_tokens']
-            )
+            
+            usage_data = None
+            if provider_response.get('usage'):
+                usage_data = Usage(
+                    prompt_tokens=provider_response['usage']['prompt_tokens'],
+                    completion_tokens=provider_response['usage']['completion_tokens'],
+                    total_tokens=provider_response['usage']['total_tokens']
+                )
 
-        return ChatCompletionResponse(
-            id=provider_response.get('id'),
-            choices=choices_list,
-            created=provider_response.get('created'),
-            model=provider_response.get('model'), # This is the model OpenAI actually used
-            object="chat.completion",
-            system_fingerprint=provider_response.get('system_fingerprint'),
-            usage=usage_data
-        )
+            return ChatCompletionResponse(
+                id=provider_response.get('id'),
+                choices=choices_list,
+                created=provider_response.get('created'),
+                model=provider_response.get('model'), # This is the model OpenAI actually used
+                object="chat.completion",
+                system_fingerprint=provider_response.get('system_fingerprint'),
+                usage=usage_data
+            )
+        else:
+            # Pydantic model response
+            if not provider_response.choices:
+                raise LLMIntegrationError("OpenAI response did not contain 'choices'.")
+
+            choices_list = []
+            for choice in provider_response.choices:
+                message_data = choice.message
+                
+                # Handle tool_calls if present
+                parsed_tool_calls = None
+                if message_data.tool_calls:
+                    parsed_tool_calls = [
+                        {
+                            "id": tc.id,
+                            "type": tc.type,
+                            "function": {"name": tc.function.name, "arguments": tc.function.arguments}
+                         } for tc in message_data.tool_calls
+                    ]
+
+                choices_list.append(
+                    ChatCompletionChoice(
+                        message=Message(
+                            role=message_data.role or 'assistant', 
+                            content=message_data.content or '', # Ensure content is not None
+                            tool_calls=parsed_tool_calls
+                        ),
+                        finish_reason=choice.finish_reason,
+                        index=choice.index
+                    )
+                )
+            
+            usage_data = None
+            if provider_response.usage:
+                usage_data = Usage(
+                    prompt_tokens=provider_response.usage.prompt_tokens,
+                    completion_tokens=provider_response.usage.completion_tokens,
+                    total_tokens=provider_response.usage.total_tokens
+                )
+
+            return ChatCompletionResponse(
+                id=provider_response.id,
+                choices=choices_list,
+                created=provider_response.created,
+                model=provider_response.model, # This is the model OpenAI actually used
+                object="chat.completion",
+                system_fingerprint=provider_response.system_fingerprint,
+                usage=usage_data
+            )
 
     def convert_from_provider_stream_chunk(self, provider_chunk: Any, original_request: ChatCompletionRequest) -> ChatCompletionChunk:
         """Converts an OpenAI-specific streaming chunk to a generic ChatCompletionChunk."""

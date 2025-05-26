@@ -8,8 +8,6 @@ from fastapi import status
 from src.amazon_chat_completions_server.api.app import app
 from src.amazon_chat_completions_server.api.schemas.requests import ChatCompletionRequest, Message
 
-SERVER_API_KEY = os.getenv("API_KEY", "your-secret-api-key")
-
 # Check for Bedrock config (profile and region are primary for boto3 to work)
 AWS_PROFILE_IS_SET = bool(os.getenv("AWS_PROFILE"))
 AWS_REGION_IS_SET = bool(os.getenv("AWS_REGION"))
@@ -32,8 +30,8 @@ async def client():
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not BEDROCK_CONFIGURED, reason="AWS_PROFILE and/or AWS_REGION not set, skipping Bedrock integration tests.")
-async def test_bedrock_claude_chat_completion_non_streaming(client: TestClient):
-    headers = {"X-API-Key": SERVER_API_KEY}
+async def test_bedrock_claude_chat_completion_non_streaming(client: TestClient, test_api_key):
+    headers = {"X-API-Key": test_api_key}
     payload = ChatCompletionRequest(
         model=TEST_BEDROCK_CLAUDE_MODEL,
         messages=[Message(role="user", content="Tell me a short story about a adventurous dog.")],
@@ -59,9 +57,9 @@ async def test_bedrock_claude_chat_completion_non_streaming(client: TestClient):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not BEDROCK_CONFIGURED, reason="AWS_PROFILE and/or AWS_REGION not set, skipping Bedrock integration tests.")
-async def test_bedrock_claude_chat_completion_streaming(client: TestClient):
+async def test_bedrock_claude_chat_completion_streaming(client: TestClient, test_api_key):
     payload = {
-        "api_key": SERVER_API_KEY, 
+        "api_key": test_api_key, 
         "model": TEST_BEDROCK_CLAUDE_MODEL,
         "messages": [Message(role="user", content="What is the capital of France? Stream your answer.").model_dump()],
         "stream": True,
@@ -71,7 +69,7 @@ async def test_bedrock_claude_chat_completion_streaming(client: TestClient):
     received_chunks = []
     full_content = ""
     
-    async with client.websocket_connect("/v1/chat/completions/stream") as websocket:
+    async with client.websocket_connect("/v1/chat/completions/stream", headers={"X-API-Key": test_api_key}) as websocket:
         await websocket.send_json(payload)
         try:
             while True:

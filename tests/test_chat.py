@@ -12,10 +12,10 @@ from src.amazon_chat_completions_server.api.schemas.requests import ChatCompleti
 # from fastapi.testclient import TestClient # Should not be needed anymore
 
 # Required environment variables with defaults for testing
-SERVER_API_KEY = os.getenv("API_KEY")
-if not SERVER_API_KEY:
-    SERVER_API_KEY = "test-api-key"
-    os.environ["API_KEY"] = SERVER_API_KEY
+# SERVER_API_KEY = os.getenv("API_KEY")
+# if not SERVER_API_KEY:
+#     SERVER_API_KEY = "test-api-key"
+#     os.environ["API_KEY"] = SERVER_API_KEY
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_API_KEY_IS_SET = bool(OPENAI_API_KEY)
@@ -66,8 +66,8 @@ async def test_chat_unauthorized_invalid_key(client: TestClient):
     assert error_content["code"] == 403
 
 @pytest.mark.asyncio
-async def test_chat_invalid_payload_empty_messages(client: TestClient):
-    headers = {"X-API-Key": SERVER_API_KEY}
+async def test_chat_invalid_payload_empty_messages(client: TestClient, test_api_key):
+    headers = {"X-API-Key": test_api_key}
     payload = {"model": "test-model", "messages": []} # Invalid: messages is empty
     response = await client.post("/v1/chat/completions", json=payload, headers=headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -75,9 +75,9 @@ async def test_chat_invalid_payload_empty_messages(client: TestClient):
 # --- OpenAI Integration Tests (Async) --- 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not OPENAI_API_KEY_IS_SET, reason="OPENAI_API_KEY not set, skipping OpenAI integration tests.")
-async def test_openai_chat_completion_non_streaming(client: TestClient):
+async def test_openai_chat_completion_non_streaming(client: TestClient, test_api_key):
     """Test non-streaming chat completion with OpenAI."""
-    headers = {"X-API-Key": SERVER_API_KEY}
+    headers = {"X-API-Key": test_api_key}
     payload = ChatCompletionRequest(
         model=TEST_OPENAI_MODEL,
         messages=[Message(role="user", content="Tell me a short joke.")],
@@ -102,18 +102,18 @@ async def test_openai_chat_completion_non_streaming(client: TestClient):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not OPENAI_API_KEY_IS_SET, reason="OPENAI_API_KEY not set, skipping OpenAI integration tests.")
-async def test_openai_chat_completion_streaming(client: TestClient):
+async def test_openai_chat_completion_streaming(client: TestClient, test_api_key):
     """Test streaming chat completion with OpenAI - expecting successful connection."""
     path = "/v1/chat/completions/stream"
     payload = {
-        "api_key": SERVER_API_KEY,  # Use the server API key for authentication
+        "api_key": test_api_key,  # Use the server API key for authentication
         "model": TEST_OPENAI_MODEL,
         "messages": [Message(role="user", content="Hello OpenAI! Stream a short response.").model_dump()],
         "stream": True,
         "max_tokens": 10
     }
     
-    async with client.websocket_connect(path, headers={"X-API-Key": SERVER_API_KEY}) as websocket:
+    async with client.websocket_connect(path, headers={"X-API-Key": test_api_key}) as websocket:
         await websocket.send_json(payload)
         full_content = ""
         try:

@@ -1,4 +1,6 @@
-# System Architecture
+# Architecture Guide
+
+> 📚 **[← Back to Documentation Hub](README.md)** | **[Main README](../README.md)**
 
 This library is designed with a layered architecture to promote modularity, flexibility, and ease of maintenance, drawing heavily from the strategies outlined in the research paper "A Comprehensive Approach to Cross-Platform LLM API Integration: OpenAI and AWS Bedrock."
 

@@ -5,9 +5,7 @@ from fastapi import status
 
 from src.amazon_chat_completions_server.api.app import app # Main FastAPI app
 
-# Ensure OPENAI_API_KEY is available, e.g., from .env file loaded by test runner or CI environment
-# For local testing, ensure your .env file has a valid OPENAI_API_KEY and the server's API_KEY.
-SERVER_API_KEY = os.getenv("API_KEY", "your-secret-api-key") # Match the one in your .env for the server
+# Use the test API key from conftest.py
 OPENAI_API_KEY_IS_SET = bool(os.getenv("OPENAI_API_KEY"))
 
 pytestmark = [
@@ -20,9 +18,9 @@ async def client():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
-async def test_list_models_success(client: AsyncClient):
+async def test_list_models_success(client: AsyncClient, test_api_key):
     """Test successful listing of models, expecting OpenAI models."""
-    headers = {"X-API-Key": SERVER_API_KEY}
+    headers = {"X-API-Key": test_api_key}
     response = await client.get("/v1/models", headers=headers)
     
     assert response.status_code == status.HTTP_200_OK

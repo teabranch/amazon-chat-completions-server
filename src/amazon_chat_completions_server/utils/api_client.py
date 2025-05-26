@@ -5,6 +5,8 @@ from typing import Any, Dict, AsyncGenerator, Callable, Optional, Union
 
 import openai
 import boto3
+import botocore.config
+import botocore.exceptions
 from botocore.exceptions import ClientError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
