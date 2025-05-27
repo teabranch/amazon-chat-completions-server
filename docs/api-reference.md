@@ -1,16 +1,23 @@
-# API Reference
+---
+layout: default
+title: API Reference
+nav_order: 3
+description: "Complete API reference for Amazon Chat Completions Server"
+---
 
-> 📚 **[← Back to Documentation Hub](README.md)** | **[Main README](../README.md)**
+# API Reference
+{: .no_toc }
 
 Complete reference for all API endpoints in the Amazon Chat Completions Server.
+{: .fs-6 .fw-300 }
 
-## 📋 Table of Contents
+## Table of contents
+{: .no_toc .text-delta }
 
-- [Authentication](#authentication)
-- [Unified Endpoint](#unified-endpoint)
-- [Standard Endpoints](#standard-endpoints)
-- [Error Responses](#error-responses)
-- [Request/Response Examples](#requestresponse-examples)
+1. TOC
+{:toc}
+
+---
 
 ## Authentication
 

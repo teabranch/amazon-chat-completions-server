@@ -273,6 +273,8 @@ class TestAWSAuthenticationMocked:
             )
 
 
+@pytest.mark.external_api
+@pytest.mark.aws_integration
 @pytest.mark.skipif(not AWS_CONFIGURED, reason=f"AWS authentication not configured: {AWS_AUTH_STATUS_MESSAGE}")
 class TestAWSAuthenticationReal:
     """Test AWS authentication methods with real AWS credentials."""

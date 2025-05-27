@@ -21,4 +21,4 @@ jobs:
         python -m pip install uv
         uv sync --extra dev # Install dependencies from uv.lock including 'dev' extras
     - name: Run tests
-      run: uv run pytest 
+      run: uv run pytest -m "not external_api" 

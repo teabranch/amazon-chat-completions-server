@@ -95,6 +95,8 @@ TEST_BEDROCK_CLAUDE_MODEL = os.getenv("TEST_BEDROCK_CLAUDE_MODEL", "us.anthropic
 
 bedrock_integration_test = [
     pytest.mark.asyncio,
+    pytest.mark.external_api,
+    pytest.mark.aws_integration,
     pytest.mark.skipif(not BEDROCK_CONFIGURED, reason=f"AWS authentication not configured: {AWS_AUTH_STATUS_MESSAGE}")
 ]
 
@@ -105,6 +107,8 @@ async def client():
         yield client
 
 @pytest.mark.asyncio
+@pytest.mark.external_api
+@pytest.mark.aws_integration
 @pytest.mark.skipif(not BEDROCK_CONFIGURED, reason=f"AWS authentication not configured: {AWS_AUTH_STATUS_MESSAGE}")
 async def test_bedrock_chat_completion_non_streaming(client: TestClient, test_api_key):
     """Test non-streaming chat completion with Bedrock Claude."""
@@ -133,6 +137,8 @@ async def test_bedrock_chat_completion_non_streaming(client: TestClient, test_ap
         print(f"Bedrock integration test failed: {response.status_code} - {response.text}")
 
 @pytest.mark.asyncio
+@pytest.mark.external_api
+@pytest.mark.aws_integration
 @pytest.mark.skipif(not BEDROCK_CONFIGURED, reason=f"AWS authentication not configured: {AWS_AUTH_STATUS_MESSAGE}")
 async def test_bedrock_chat_completion_streaming(client: TestClient, test_api_key):
     """Test streaming chat completion with Bedrock Claude - expecting successful connection."""

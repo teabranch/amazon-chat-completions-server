@@ -1,20 +1,23 @@
-# CLI Reference
+---
+layout: default
+title: CLI Reference
+nav_order: 4
+description: "Complete CLI reference for Amazon Chat Completions Server"
+---
 
-> 📚 **[← Back to Documentation Hub](README.md)** | **[Main README](../README.md)**
+# CLI Reference
+{: .no_toc }
 
 Complete reference for the Amazon Chat Completions Server command-line interface.
+{: .fs-6 .fw-300 }
 
-## 📋 Table of Contents
+## Table of contents
+{: .no_toc .text-delta }
 
-- [Installation](#installation)
-- [Global Options](#global-options)
-- [Commands Overview](#commands-overview)
-- [Chat Commands](#chat-commands)
-- [Server Commands](#server-commands)
-- [Configuration Commands](#configuration-commands)
-- [Model Commands](#model-commands)
-- [Examples](#examples)
-- [Configuration Files](#configuration-files)
+1. TOC
+{:toc}
+
+---
 
 ## Installation
 

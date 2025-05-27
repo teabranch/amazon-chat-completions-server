@@ -8,10 +8,14 @@ from src.amazon_chat_completions_server.api.app import app # Main FastAPI app
 # Use the test API key from conftest.py
 OPENAI_API_KEY_IS_SET = bool(os.getenv("OPENAI_API_KEY"))
 
-pytestmark = [
+openai_integration_test = [
     pytest.mark.asyncio,
+    pytest.mark.external_api,
+    pytest.mark.openai_integration,
     pytest.mark.skipif(not OPENAI_API_KEY_IS_SET, reason="OPENAI_API_KEY not set, skipping integration tests for models.")
 ]
+
+pytestmark = openai_integration_test
 
 @pytest.fixture(scope="module")
 async def client():

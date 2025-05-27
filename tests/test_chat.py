@@ -26,6 +26,8 @@ TEST_OPENAI_MODEL = os.getenv("TEST_OPENAI_MODEL", "gpt-4o")
 
 openai_integration_test = [
     pytest.mark.asyncio,
+    pytest.mark.external_api,
+    pytest.mark.openai_integration,
     pytest.mark.skipif(not OPENAI_API_KEY_IS_SET, reason="OPENAI_API_KEY not set, skipping OpenAI integration tests.")
 ]
 
@@ -77,8 +79,10 @@ async def test_chat_invalid_payload_empty_messages(client: TestClient, test_api_
     response = await client.post("/v1/chat/completions", json=payload, headers=headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-# --- OpenAI Integration Tests (Async) --- 
+# --- OpenAI Integration Tests (Async) ---
 @pytest.mark.asyncio
+@pytest.mark.external_api
+@pytest.mark.openai_integration
 @pytest.mark.skipif(not OPENAI_API_KEY_IS_SET, reason="OPENAI_API_KEY not set, skipping OpenAI integration tests.")
 async def test_openai_chat_completion_non_streaming(client: TestClient, test_api_key):
     """Test non-streaming chat completion with OpenAI."""
@@ -106,6 +110,8 @@ async def test_openai_chat_completion_non_streaming(client: TestClient, test_api
     assert choice["finish_reason"] == "stop" or choice["finish_reason"] == "length"
 
 @pytest.mark.asyncio
+@pytest.mark.external_api
+@pytest.mark.openai_integration
 @pytest.mark.skipif(not OPENAI_API_KEY_IS_SET, reason="OPENAI_API_KEY not set, skipping OpenAI integration tests.")
 async def test_openai_chat_completion_streaming(client: TestClient, test_api_key):
     """Test streaming chat completion with OpenAI - expecting successful connection."""
@@ -144,6 +150,8 @@ async def test_openai_chat_completion_streaming(client: TestClient, test_api_key
     assert len(full_content) > 0, "No content received from stream"
 
 @pytest.mark.asyncio
+@pytest.mark.external_api
+@pytest.mark.openai_integration
 @pytest.mark.skipif(not OPENAI_API_KEY_IS_SET, reason="OPENAI_API_KEY not set, skipping OpenAI integration tests.")
 async def test_openai_chat_stream_auth_fail(client: TestClient):
     """Test streaming auth failure for HTTP streaming."""
@@ -192,6 +200,8 @@ async def test_chat_completion_openai_format(client: TestClient, test_api_key):
         assert response.status_code == status.HTTP_200_OK
 
 @pytest.mark.asyncio
+@pytest.mark.external_api
+@pytest.mark.openai_integration
 @pytest.mark.skipif(not OPENAI_API_KEY_IS_SET, reason="OPENAI_API_KEY not set, skipping OpenAI integration tests.")
 async def test_openai_chat_completion_integration(client: TestClient, test_api_key):
     """Test actual OpenAI chat completion integration"""

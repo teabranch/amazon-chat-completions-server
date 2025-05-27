@@ -1,8 +1,24 @@
-# Architecture Guide
+---
+layout: default
+title: Architecture
+parent: Guides
+nav_order: 3
+description: "System design and architecture overview for Amazon Chat Completions Server"
+---
 
-> 📚 **[← Back to Documentation Hub](README.md)** | **[Main README](../README.md)**
+# Architecture Guide
+{: .no_toc }
 
 This document describes the architecture of the Amazon Chat Completions Server, which implements a unified, provider-agnostic approach to LLM integration.
+{: .fs-6 .fw-300 }
+
+## Table of contents
+{: .no_toc .text-delta }
+
+1. TOC
+{:toc}
+
+---
 
 ## Core Principles
 
@@ -199,125 +215,145 @@ Streaming API Call
     ↓
 Chunk Processing & Format Conversion
     ↓
-Server-Sent Events (SSE) Response
+Real-time Client Response (Server-Sent Events)
+```
+
+### 3. Error Handling Flow
+
+```
+API Error
     ↓
-Client Receives Real-time Chunks
+Error Classification (Auth/Rate Limit/Service/etc.)
+    ↓
+Error Mapping (Provider-specific → Standard format)
+    ↓
+Retry Logic (if applicable)
+    ↓
+Standardized Error Response
 ```
 
 ## Format Support Matrix
 
-| Input Format | Output Format | Conversion Required | Supported |
-|-------------|---------------|-------------------|-----------|
-| OpenAI | OpenAI | No | ✅ |
-| OpenAI | Bedrock Claude | Yes | ✅ |
-| OpenAI | Bedrock Titan | Yes | ✅ |
-| Bedrock Claude | OpenAI | Yes | ✅ |
-| Bedrock Claude | Bedrock Claude | No | ✅ |
-| Bedrock Titan | OpenAI | Yes | ✅ |
-| Bedrock Titan | Bedrock Titan | No | ✅ |
+### Input Formats
 
-## Authentication & Security
+| Format | Detection Key | Example |
+|--------|---------------|---------|
+| OpenAI | `model` + `messages` | `{"model": "gpt-4o-mini", "messages": [...]}` |
+| Bedrock Claude | `anthropic_version` | `{"anthropic_version": "bedrock-2023-05-31", ...}` |
+| Bedrock Titan | `inputText` | `{"inputText": "User: Hello", ...}` |
 
-**API Key Authentication:**
-```python
-async def verify_api_key(credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())):
-    if not credentials or credentials.credentials != app_config.API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    return credentials.credentials
+### Output Formats
+
+| Format | Query Parameter | Response Structure |
+|--------|-----------------|-------------------|
+| OpenAI | `target_format=openai` | Standard OpenAI Chat Completions format |
+| Bedrock Claude | `target_format=bedrock_claude` | Anthropic Claude message format |
+| Bedrock Titan | `target_format=bedrock_titan` | Amazon Titan text generation format |
+
+### Model Routing Patterns
+
+| Pattern | Provider | Examples |
+|---------|----------|----------|
+| `gpt-*` | OpenAI | `gpt-4o-mini`, `gpt-3.5-turbo` |
+| `text-*` | OpenAI | `text-davinci-003` |
+| `anthropic.*` | Bedrock | `anthropic.claude-3-haiku-20240307-v1:0` |
+| `amazon.*` | Bedrock | `amazon.titan-text-express-v1` |
+| `ai21.*` | Bedrock | `ai21.j2-ultra-v1` |
+| `us.anthropic.*` | Bedrock | `us.anthropic.claude-3-haiku-20240307-v1:0` |
+
+## Deployment Architecture
+
+### Development Environment
+
+```
+Developer Machine
+├── Python Application
+├── Local Configuration (.env)
+├── Direct API Access
+│   ├── OpenAI API
+│   └── AWS Bedrock (via credentials)
+└── Local Testing
 ```
 
-**Security Features:**
-- API key validation on all endpoints
-- Request/response logging with sensitive data masking
-- CORS configuration for cross-origin requests
-- Input validation using Pydantic models
+### Production Environment
 
-## Error Handling
-
-**Hierarchical Exception Structure:**
-```python
-LLMIntegrationError (Base)
-├── ConfigurationError
-├── ModelNotFoundError
-├── AuthenticationError
-├── RateLimitError
-├── APIConnectionError
-└── ServiceUnavailableError
+```
+Load Balancer
+    ↓
+Container Orchestration (ECS/Kubernetes)
+    ↓
+Application Containers
+├── Environment Variables
+├── IAM Roles (for AWS)
+├── Health Checks
+└── Logging/Monitoring
+    ↓
+External APIs
+├── OpenAI API
+└── AWS Bedrock
 ```
 
-**Error Response Format:**
-```json
-{
-  "error": {
-    "type": "error_type",
-    "message": "Human-readable message",
-    "details": "Additional context"
-  }
-}
+### Security Architecture
+
+```
+Client Request
+    ↓
+API Gateway (optional)
+    ↓
+Authentication Layer (API Key)
+    ↓
+Rate Limiting
+    ↓
+Application Layer
+    ↓
+Provider Authentication
+├── OpenAI API Key
+└── AWS IAM Roles/Credentials
 ```
 
-## Configuration Management
+## Performance Considerations
 
-**Environment-Based Configuration:**
-```python
-class AppConfig:
-    # API Keys
-    OPENAI_API_KEY: str
-    API_KEY: str
-    
-    # AWS Configuration
-    AWS_ACCESS_KEY_ID: Optional[str]
-    AWS_SECRET_ACCESS_KEY: Optional[str]
-    AWS_REGION: str = "us-east-1"
-    AWS_PROFILE: Optional[str]
-    
-    # Defaults
-    DEFAULT_OPENAI_MODEL: str = "gpt-4o-mini"
-    LOG_LEVEL: str = "INFO"
-```
+### Caching Strategy
 
-## Monitoring & Observability
+- **Model Metadata**: Cache available models list
+- **Configuration**: Cache environment variables and settings
+- **Connection Pooling**: Reuse HTTP connections to providers
 
-**Request Logging:**
-- Request/response timing
-- Model routing decisions
-- Format conversion operations
-- Error tracking and categorization
+### Concurrency Management
 
-**Health Checks:**
-- Unified endpoint health (`/v1/chat/completions/health`)
-- Provider availability checks
-- Configuration validation
+- **Async/Await**: Non-blocking I/O operations
+- **Connection Limits**: Respect provider rate limits
+- **Request Queuing**: Handle burst traffic gracefully
 
-## Scalability Considerations
+### Monitoring Points
 
-**Horizontal Scaling:**
-- Stateless design enables multiple server instances
-- Load balancing across instances
-- Shared configuration via environment variables
+- **Request Latency**: Track end-to-end response times
+- **Provider Health**: Monitor upstream API availability
+- **Error Rates**: Track and alert on error patterns
+- **Resource Usage**: Monitor memory and CPU utilization
 
-**Performance Optimizations:**
-- Service instance caching in `LLMServiceFactory`
-- Connection pooling for API clients
-- Streaming responses for long completions
+## Extensibility
 
-**Resource Management:**
-- Configurable timeouts and retry policies
-- Rate limiting and quota management
-- Memory-efficient streaming processing
+### Adding New Providers
 
-## Extension Points
+1. **Create Service Class**: Implement `AbstractLLMService`
+2. **Update Factory**: Add routing logic for new model patterns
+3. **Add Adapters**: Implement format conversion if needed
+4. **Update Tests**: Add comprehensive test coverage
 
-**Adding New Providers:**
-1. Implement `AbstractLLMService`
-2. Add model ID patterns to `LLMServiceFactory`
-3. Create format conversion adapters if needed
-4. Update configuration and documentation
+### Adding New Formats
 
-**Adding New Bedrock Models:**
-1. Create new strategy class implementing `BedrockAdapterStrategy`
-2. Update `BedrockAdapter` to use new strategy
-3. Add model ID mappings
-4. Write comprehensive tests
+1. **Update Detection**: Add format detection logic
+2. **Create Adapters**: Implement conversion to/from standard format
+3. **Update Routing**: Ensure proper service selection
+4. **Document Format**: Add to API documentation
 
-This unified architecture provides a clean, maintainable, and extensible foundation for multi-provider LLM integration while maintaining a simple, consistent API surface. 
+### Configuration Management
+
+- **Environment Variables**: Runtime configuration
+- **Feature Flags**: Toggle functionality without deployment
+- **Provider Settings**: Per-provider configuration options
+
+---
+
+This architecture provides a solid foundation for a unified LLM integration server while maintaining flexibility for future enhancements and provider additions. 

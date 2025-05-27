@@ -743,30 +743,99 @@ graph TD
 
 ## 🧪 Testing
 
-### Run Tests
+### Test Categories
+
+The project includes several categories of tests:
+
+- **Unit Tests**: Fast, isolated tests that don't make external API calls
+- **Integration Tests**: Tests that make real API calls to external services
+- **External API Tests**: Tests marked with `external_api` that are skipped in CI
+
+### Running Tests
 
 ```bash
-# Run all tests
-python -m pytest
+# Run all tests (excluding external API tests)
+uv run pytest
+
+# Run all tests including external API tests (requires credentials)
+uv run pytest -m "not external_api or external_api"
+
+# Run only unit tests (no external API calls)
+uv run pytest -m "not external_api"
+
+# Run only OpenAI integration tests (requires OPENAI_API_KEY)
+uv run pytest -m "openai_integration"
+
+# Run only AWS/Bedrock integration tests (requires AWS credentials)
+uv run pytest -m "aws_integration"
+
+# Run all external API tests (requires all credentials)
+uv run pytest -m "external_api"
 
 # Run with coverage
-python -m pytest --cov=src --cov-report=html
+uv run pytest --cov=src --cov-report=html
 
 # Run specific test categories
-python -m pytest tests/api/  # API tests
-python -m pytest tests/cli/  # CLI tests
-python -m pytest tests/core/ # Core functionality tests
+uv run pytest tests/api/  # API tests
+uv run pytest tests/cli/  # CLI tests
+uv run pytest tests/core/ # Core functionality tests
 ```
+
+### External API Test Configuration
+
+External API tests require real credentials and are automatically skipped when:
+
+- **OpenAI Tests**: `OPENAI_API_KEY` environment variable is not set
+- **AWS/Bedrock Tests**: AWS authentication is not configured (no `AWS_REGION`, `AWS_PROFILE`, or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`)
+
+#### Setting up OpenAI Integration Tests
+
+```bash
+export OPENAI_API_KEY="sk-your-openai-api-key"
+export TEST_OPENAI_MODEL="gpt-4o"  # Optional, defaults to gpt-4o
+uv run pytest -m "openai_integration"
+```
+
+#### Setting up AWS/Bedrock Integration Tests
+
+```bash
+# Option 1: Using AWS Profile
+export AWS_PROFILE="your-aws-profile"
+export AWS_REGION="us-east-1"
+
+# Option 2: Using Access Keys
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"
+
+# Option 3: Using Role Assumption
+export AWS_PROFILE="your-base-profile"
+export AWS_ROLE_ARN="arn:aws:iam::123456789012:role/YourRole"
+export AWS_EXTERNAL_ID="your-external-id"  # Optional
+export AWS_REGION="us-east-1"
+
+# Run AWS tests
+uv run pytest -m "aws_integration"
+```
+
+### GitHub Actions CI/CD
+
+- **Regular CI**: Runs unit tests only (`pytest -m "not external_api"`)
+- **Integration Tests**: Manual workflow for running external API tests with credentials
+  - Can be triggered manually from GitHub Actions tab
+  - Supports running OpenAI tests, AWS tests, or both
+  - Uses repository secrets for API keys and credentials
 
 ### Test Coverage
 
-- ✅ **113 tests passing** with comprehensive coverage
+- ✅ **113+ tests passing** with comprehensive coverage
 - ✅ **Format detection** and conversion
 - ✅ **Model-based routing** logic
 - ✅ **Streaming** functionality
 - ✅ **Error handling** and edge cases
 - ✅ **Authentication** and security
 - ✅ **CLI commands** and configuration
+- ✅ **External API integration** (when credentials available)
 
 ## 🚀 Deployment
 
