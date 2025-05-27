@@ -471,6 +471,7 @@ class TestAWSAuthenticationReal:
 class TestAWSAuthenticationConfiguration:
     """Test AWS authentication configuration and validation."""
 
+    @pytest.mark.skipif(not AWS_CONFIGURED, reason=f"AWS authentication not configured: {AWS_AUTH_STATUS_MESSAGE}")
     def test_configuration_validation(self):
         """Test that configuration validation works with new authentication methods."""
         from src.amazon_chat_completions_server.utils.config_loader import AppConfig
@@ -479,13 +480,23 @@ class TestAWSAuthenticationConfiguration:
         # the current configuration and validates it correctly
         config = AppConfig()
         
-        # Test that the config has the expected AWS role ARN from .env
-        assert config.AWS_ROLE_ARN is not None
-        assert 'arn:aws:iam::' in config.AWS_ROLE_ARN
-        
         # Test that validation doesn't crash with the current configuration
         # The _validate_config method should run without exceptions
         config._validate_config()  # This should not raise any exceptions
+        
+        # Only test AWS_ROLE_ARN if it's actually configured
+        # Different authentication methods may not require AWS_ROLE_ARN
+        if config.AWS_ROLE_ARN is not None:
+            assert 'arn:aws:iam::' in config.AWS_ROLE_ARN
+        
+        # Verify that at least one authentication method is configured
+        aws_static_keys_present = config.AWS_ACCESS_KEY_ID and config.AWS_SECRET_ACCESS_KEY
+        aws_profile_present = bool(config.AWS_PROFILE)
+        aws_role_arn_present = bool(config.AWS_ROLE_ARN)
+        aws_web_identity_present = bool(config.AWS_WEB_IDENTITY_TOKEN_FILE)
+        
+        assert any([aws_static_keys_present, aws_profile_present, aws_role_arn_present, aws_web_identity_present]), \
+            "At least one AWS authentication method should be configured when AWS_CONFIGURED is True"
 
     def test_authentication_method_detection(self):
         """Test the authentication method detection logic."""
