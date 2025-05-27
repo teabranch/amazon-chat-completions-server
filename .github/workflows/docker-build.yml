@@ -1,0 +1,34 @@
+name: Docker Image CI
+
+on:
+  push: # Trigger on pushes to all branches (except ignored ones)
+    branches-ignore:
+      - 'gh-pages' # Example: ignore docs branch, add others if needed
+  pull_request:
+    branches: [ "main" ] # Trigger on PRs to main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Determine Docker tag
+      id: docker_meta
+      shell: bash
+      run: |
+        TAG_VALUE=""
+        SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_name }}" == "main" ]]; then
+          TAG_VALUE="main-snapshot-${SHORT_SHA}"
+        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          TAG_VALUE="pr-${{ github.event.number }}-${SHORT_SHA}"
+        elif [[ "${{ github.event_name }}" == "push" ]]; then # For pushes to other branches
+          SANITIZED_REF_NAME=$(echo "${{ github.ref_name }}" | sed 's|/|-|g')
+          TAG_VALUE="dev-${SANITIZED_REF_NAME}-${SHORT_SHA}"
+        else # Fallback
+          TAG_VALUE="unknown-${SHORT_SHA}-$(date +%s)"
+        fi
+        echo "tag_suffix=${TAG_VALUE}" >> $GITHUB_OUTPUT
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag accs:${{ steps.docker_meta.outputs.tag_suffix }} 
