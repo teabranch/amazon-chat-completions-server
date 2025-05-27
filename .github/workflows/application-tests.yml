@@ -19,6 +19,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install uv
-        uv pip sync --extra dev # Installs dependencies from uv.lock including 'dev' extras
+        uv sync --extra dev # Install dependencies from uv.lock including 'dev' extras
     - name: Run tests
       run: pytest 

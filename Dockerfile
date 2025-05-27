@@ -33,7 +33,7 @@ RUN uv pip install --no-cache-dir --system .
 
 # Copy other necessary files that might be needed by the application or for reference
 # .env.example is useful for understanding required environment variables
-COPY .env.example ./.env.example
+# COPY .env.example ./.env.example
 
 
 # ---- Final Stage ----
@@ -69,7 +69,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app/src ./src
 
 # Copy the .env.example file for reference
-COPY --from=builder /app/.env.example ./.env.example
+# COPY --from=builder /app/.env.example ./.env.example
 
 # Switch to the non-privileged user
 USER appuser
