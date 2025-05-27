@@ -1,62 +1,77 @@
-# Amazon Chat Completions Server - Documentation Hub
+# Amazon Chat Completions Server Documentation
 
-Welcome to the comprehensive documentation for the Amazon Chat Completions Server. This documentation provides everything you need to understand, deploy, and extend the provider-agnostic, bidirectional chat completions API server.
+Welcome to the comprehensive documentation for the Amazon Chat Completions Server - a unified, provider-agnostic chat completions API server.
 
 ## 📚 Documentation Overview
 
-### 🚀 Quick Navigation
+This documentation covers all aspects of the server, from basic usage to advanced development and deployment scenarios.
 
-| Section | Description | File |
-|---------|-------------|------|
-| **[Getting Started](#-getting-started)** | Installation, configuration, and first steps | [Main README](../README.md) |
-| **[API Reference](#-api-reference)** | Complete REST API documentation | [api-reference.md](api-reference.md) |
-| **[CLI Reference](#-cli-reference)** | Command-line interface guide | [cli-reference.md](cli-reference.md) |
-| **[Architecture](#-architecture)** | System design and components | [architecture.md](architecture.md) |
-| **[Core Components](#-core-components)** | Detailed component documentation | [core-components.md](core-components.md) |
-| **[Development](#-development)** | Extending and contributing | [extending.md](extending.md) |
-| **[Testing](#-testing)** | Testing guide and coverage | [testing.md](testing.md) |
+### Quick Navigation
 
-## 🚀 Getting Started
+- **[API Reference](api-reference.md)** - Complete API documentation for the unified endpoint
+- **[CLI Reference](cli-reference.md)** - Command-line interface documentation
+- **[Architecture](architecture.md)** - System design and unified architecture
+- **[Usage Guide](usage.md)** - Programming examples and practical use cases
+- **[Core Components](core-components.md)** - Detailed component documentation
+- **[Testing Guide](testing.md)** - Testing strategies and coverage
+- **[Development Guide](extending.md)** - Extending and customizing the server
 
-### Quick Start
-For immediate setup and basic usage, see the [Quick Start section](../README.md#-quick-start) in the main README.
+## 🚀 Quick Start
 
-### Key Concepts
-- **Bidirectional Format Support**: Use any request format with any model
-- **Auto-Format Detection**: Automatic request format detection and routing
-- **Universal Endpoints**: Single endpoints handling multiple format combinations
-- **Provider Agnostic**: Consistent interface across OpenAI and AWS Bedrock
+### Installation & Setup
 
-### Installation & Configuration
-Complete installation and configuration instructions are available in the [main README](../README.md#-installation).
+```bash
+# Clone and install
+git clone https://github.com/teabranch/amazon-chat-completions-server.git
+cd amazon-chat-completions-server
+uv pip install -e .
 
-## 📖 API Reference
+# Configure environment
+amazon-chat config set
 
-### Endpoint Categories
+# Start server
+amazon-chat serve --host 0.0.0.0 --port 8000
+```
 
-#### Standard Endpoints
-- `POST /v1/chat/completions` - OpenAI-compatible chat completions
-- `GET /v1/models` - List available models
-- `GET /health` - Health check
+### Basic Usage
 
-#### Reverse Integration Endpoints
-- `POST /bedrock/claude/invoke-model` - Bedrock Claude format → OpenAI models
-- `POST /bedrock/titan/invoke-model` - Bedrock Titan format → OpenAI models
-- Streaming variants available for all endpoints
+```bash
+# Test the unified endpoint
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "stream": false
+  }'
+```
 
-#### Universal Endpoints
-- `POST /v1/completions/universal` - Auto-detecting format endpoint
-- `POST /v1/completions/universal/stream` - Auto-detecting streaming
+## 🔄 Unified Endpoint
+
+### Single Endpoint for Everything
+
+The `/v1/chat/completions` endpoint is the **only endpoint you need**. It:
+
+1. **Auto-detects** your input format (OpenAI, Bedrock Claude, Bedrock Titan)
+2. **Routes** to the appropriate provider based on model ID
+3. **Converts** between formats as needed
+4. **Streams** responses in real-time when requested
+5. **Returns** responses in your preferred format
 
 ### Format Combinations
 
-| Input Format | Output Format | Use Case |
-|-------------|---------------|----------|
-| OpenAI | OpenAI | Standard OpenAI usage |
-| OpenAI | Bedrock | OpenAI clients → Bedrock response |
-| Bedrock Claude | Bedrock | Bedrock clients → OpenAI models |
-| Bedrock Claude | OpenAI | Bedrock clients → OpenAI response |
-| Auto-detect | Auto-detect | Universal compatibility |
+All format combinations are supported through the unified endpoint:
+
+| Input Format | Output Format | Use Case | Streaming |
+|-------------|---------------|----------|-----------|
+| OpenAI | OpenAI | Standard OpenAI usage | ✅ |
+| OpenAI | Bedrock Claude | OpenAI clients → Bedrock response | ✅ |
+| OpenAI | Bedrock Titan | OpenAI clients → Titan response | ✅ |
+| Bedrock Claude | OpenAI | Bedrock clients → OpenAI response | ✅ |
+| Bedrock Claude | Bedrock Claude | Claude format preserved | ✅ |
+| Bedrock Titan | OpenAI | Titan clients → OpenAI response | ✅ |
+| Bedrock Titan | Bedrock Titan | Titan format preserved | ✅ |
 
 **Complete API documentation**: [api-reference.md](api-reference.md)
 
@@ -80,57 +95,58 @@ amazon-chat models
 ```
 
 ### Configuration Management
+
 The CLI provides interactive configuration setup and management with secure handling of API keys and credentials.
 
 **Complete CLI documentation**: [cli-reference.md](cli-reference.md)
 
 ## 🏗️ Architecture
 
-### System Design
+### Unified Design
 
-The system uses a layered architecture with these key patterns:
+The system uses a layered architecture with intelligent format detection and model-based routing:
 
-1. **Adapter Pattern**: Convert between different API formats
-2. **Strategy Pattern**: Handle different model families within providers
-3. **Factory Pattern**: Create appropriate services for any format combination
-4. **Observer Pattern**: Real-time streaming with format conversion
-
-### Core Layers
-
+```mermaid
+graph LR
+    A[Any Format Request] --> B[Format Detection]
+    B --> C[Model-Based Routing]
+    C --> D[Provider API Call]
+    D --> E[Format Conversion]
+    E --> F[Unified Response]
+    
+    style A fill:#e1f5fe
+    style F fill:#e8f5e8
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Any Format    │───▶│  Auto-Detection  │───▶│  Route to       │
-│   Request       │    │  & Conversion    │    │  Appropriate    │
-└─────────────────┘    └──────────────────┘    │  Provider       │
-                                               └─────────────────┘
-                                                        │
-                                                        ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Requested     │◀───│  Response        │◀───│  Provider       │
-│   Format        │    │  Conversion      │    │  Response       │
-│   Response      │    │                  │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+
+### Core Principles
+
+1. **Single Responsibility**: Each component has a clear, focused purpose
+2. **Auto-Detection**: Intelligent format detection eliminates complexity
+3. **Model-Based Routing**: Automatic provider selection based on model ID patterns
+4. **Format Conversion**: Seamless translation between all supported formats
+5. **Streaming Support**: Real-time response streaming with format preservation
 
 **Detailed architecture documentation**: [architecture.md](architecture.md)
 
 ## 🔧 Core Components
 
 ### Service Layer
+
 - `AbstractLLMService` - Unified interface for all LLM providers
-- `ConcreteLLMService` - Generic implementation with adapter delegation
-- `LLMServiceFactory` - Service creation and management
+- `LLMServiceFactory` - Model-based service creation and routing
+- `OpenAIService` / `BedrockService` - Provider-specific implementations
 
-### Adapter Layer
-- `BaseLLMAdapter` - Abstract base for all adapters
-- `OpenAIAdapter` - OpenAI API integration
-- `BedrockAdapter` - AWS Bedrock integration with strategy pattern
-- `BedrockToOpenAIAdapter` - Reverse integration adapter
+### Format Detection & Conversion
 
-### Strategy Layer
-- `ClaudeStrategy` - Anthropic Claude model handling
-- `TitanStrategy` - Amazon Titan model handling
-- Extensible for additional Bedrock model families
+- `RequestFormatDetector` - Automatic input format detection
+- `BedrockToOpenAIAdapter` - Bidirectional format conversion
+- Strategy pattern for different model families
+
+### API Layer
+
+- Unified `/v1/chat/completions` endpoint
+- Authentication and security middleware
+- Streaming response handling
 
 **Detailed component documentation**: [core-components.md](core-components.md)
 
@@ -138,27 +154,20 @@ The system uses a layered architecture with these key patterns:
 
 ### Adding New Providers
 
-1. **Create Adapter**: Implement `BaseLLMAdapter`
-2. **Update Factory**: Add provider to `LLMServiceFactory`
-3. **Add Routes**: Create API endpoints if needed
+1. **Create Service**: Implement `AbstractLLMService`
+2. **Update Factory**: Add model ID patterns to `LLMServiceFactory`
+3. **Add Adapters**: Create format conversion adapters if needed
 4. **Write Tests**: Comprehensive test coverage
 5. **Update Documentation**: Document new capabilities
 
-### Adding New Bedrock Models
-
-1. **Create Strategy**: Implement `BedrockAdapterStrategy`
-2. **Update BedrockAdapter**: Add strategy selection logic
-3. **Update Model Mapping**: Add to `BEDROCK_MODEL_ID_MAP`
-4. **Add Tests**: Strategy-specific test coverage
-
 ### Project Structure
 
-```
+```ini
 src/amazon_chat_completions_server/
 ├── api/                    # FastAPI application
 ├── cli/                   # Command-line interface
 ├── core/                  # Core models and exceptions
-├── adapters/              # Provider adapters
+├── adapters/              # Format conversion adapters
 ├── services/              # Service layer
 └── utils/                 # Utilities and configuration
 ```
@@ -168,131 +177,85 @@ src/amazon_chat_completions_server/
 ## 🧪 Testing
 
 ### Test Coverage
-- ✅ **51 source files** with comprehensive test coverage
-- ✅ **24 test files** covering all functionality
-- ✅ **Core models** validation and conversion
+
+- ✅ **113 tests passing** with comprehensive coverage
 - ✅ **Format detection** with auto-detection logic
-- ✅ **Reverse adapters** with bidirectional conversion
-- ✅ **API endpoints** with authentication and streaming
+- ✅ **Model-based routing** logic
+- ✅ **Format conversion** in all directions
+- ✅ **Streaming** functionality
+- ✅ **Error handling** and edge cases
+- ✅ **Authentication** and security
+- ✅ **CLI commands** and configuration
 
 ### Running Tests
 
 ```bash
 # Run all tests
-pytest
+python -m pytest
 
 # Run with coverage
-pytest --cov=src --cov-report=html
+python -m pytest --cov=src --cov-report=html
 
-# Run specific categories
-pytest tests/core/ -v
-pytest tests/adapters/ -v
-pytest tests/api/ -v
+# Run specific test categories
+python -m pytest tests/api/  # API tests
+python -m pytest tests/cli/  # CLI tests
+python -m pytest tests/core/ # Core functionality tests
 ```
 
 **Complete testing guide**: [testing.md](testing.md)
 
-## 🚀 Deployment & Production
+## 📚 Additional Resources
 
-### Docker Deployment
+### Programming Guide
 
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY . .
-RUN pip install -e .
-EXPOSE 8000
-CMD ["amazon-chat", "serve", "--host", "0.0.0.0", "--port", "8000"]
-```
+- **[Usage Guide](usage.md)** - Practical Python examples and use cases
+- Code examples for all supported formats
+- Advanced features like tool calling and multimodal content
+- Best practices and error handling
 
-### Environment Configuration
+### Deployment & Operations
 
-```bash
-# Required
-OPENAI_API_KEY=your-openai-api-key
-API_KEY=your-server-api-key
+- __[Server & CLI Guide](server_and_cli.md)__ - Server management and operations
+- Docker deployment examples
+- Production considerations
+- Monitoring and logging
 
-# AWS Configuration
-AWS_ACCESS_KEY_ID=your-key-id
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
+### Package Management
 
-# Optional
-DEFAULT_OPENAI_MODEL=gpt-4o-mini
-LOG_LEVEL=INFO
-```
+- __[Packaging Guide](packaging_guide.md)__ - Building and distributing the package
+- Creating wheels and distributions
+- Version management
 
-### Production Considerations
-- Load balancing with multiple instances
-- Health checks and monitoring
-- HTTPS and security configuration
-- Centralized logging
-- Response caching
+## 🎯 Key Features
 
-**Complete deployment information**: [Main README - Deployment](../README.md#-deployment)
+### Unified Interface
 
-## 📊 Features & Capabilities
+- **Single Endpoint**: `/v1/chat/completions` handles everything
+- **Auto-Detection**: Intelligent format detection
+- **Model-Based Routing**: Automatic provider selection
+- **Format Conversion**: Seamless translation between formats
 
-### Supported Models
+### Enterprise Ready
 
-#### OpenAI Models
-- `gpt-4o` - Latest GPT-4 Omni model
-- `gpt-4o-mini` - Efficient GPT-4 Omni model (default)
-- `gpt-3.5-turbo` - Fast and efficient model
-- `gpt-4-turbo` - Advanced GPT-4 model
+- **Authentication**: Secure API key-based authentication
+- **Streaming**: Real-time response streaming
+- **Error Handling**: Comprehensive error management
+- **Monitoring**: Request/response logging and health checks
 
-#### AWS Bedrock Models
-- `anthropic.claude-3-haiku-20240307-v1:0` - Fast Claude model
-- `anthropic.claude-3-sonnet-20240229-v1:0` - Balanced Claude model
-- `anthropic.claude-3-opus-20240229-v1:0` - Most capable Claude model
-- `amazon.titan-text-express-v1` - Amazon Titan model
+### Developer Friendly
 
-### Advanced Features
-- **Multimodal Content**: Text and image processing
-- **Tool Calling**: Function calling across providers
-- **Streaming Support**: Real-time response streaming
-- **Format Conversion**: Seamless format translation
-- **Auto-Detection**: Intelligent request format detection
+- **CLI Tools**: Interactive chat, configuration, and server management
+- **OpenAI Compatible**: Drop-in replacement for OpenAI Chat Completions API
+- **Extensible**: Easy to add new providers and formats
+- **Well Tested**: Comprehensive test coverage
 
-## 🔍 Interactive Documentation
+## 🔗 External Links
 
-When the server is running, access interactive documentation:
-
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
-
-## 📞 Support & Contributing
-
-### Getting Help
-- **GitHub Issues**: [Report bugs and request features](https://github.com/teabranch/amazon-chat-completions-server/issues)
-- **Documentation**: This comprehensive guide and inline API docs
-- **Examples**: Working code examples in the main README
-
-### Contributing
-We welcome contributions! See the [Contributing section](../README.md#-contributing) in the main README for guidelines.
-
-### Development Guidelines
-- Write comprehensive tests for new features
-- Follow existing code style and patterns
-- Update documentation for new capabilities
-- Ensure backward compatibility
+- **GitHub Repository**: [amazon-chat-completions-server](https://github.com/teabranch/amazon-chat-completions-server)
+- **Issues & Support**: [GitHub Issues](https://github.com/teabranch/amazon-chat-completions-server/issues)
+- **OpenAI API Reference**: [Chat Completions](https://platform.openai.com/docs/api-reference/chat)
+- **AWS Bedrock Documentation**: [Bedrock User Guide](https://docs.aws.amazon.com/bedrock/)
 
 ---
 
-## 📋 Documentation Status
-
-| Section | Status | Last Updated |
-|---------|--------|--------------|
-| Quick Start | ✅ Complete | Current |
-| API Reference | ✅ Complete | Current |
-| CLI Reference | ✅ Complete | Current |
-| Architecture | ✅ Complete | Current |
-| Core Components | ✅ Complete | Current |
-| Development Guide | ✅ Complete | Current |
-| Testing Guide | ✅ Complete | Current |
-| Deployment Guide | ✅ Complete | Current |
-
----
-
-**Ready to dive deeper? Choose a section above or start with the [Quick Start Guide](../README.md#-quick-start)!** 🚀 
+This documentation provides comprehensive coverage of the Amazon Chat Completions Server. For interactive API testing, visit `/docs` when the server is running.

@@ -1,5 +1,3 @@
-import pytest
-from typing import Dict, Any
 
 from src.amazon_chat_completions_server.utils.request_detector import RequestFormatDetector
 from src.amazon_chat_completions_server.core.bedrock_models import RequestFormat

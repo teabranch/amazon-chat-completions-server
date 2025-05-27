@@ -1,17 +1,17 @@
 from rich.console import Console
-from rich.markdown import Markdown
 from typing import Optional
+
 
 class ChatFormatter:
     """Formats chat messages with rich styling."""
-    
+
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
         self.role_styles = {
             "system": "[bold yellow]System[/bold yellow]",
             "user": "[bold blue]You[/bold blue]",
             "assistant": "[bold green]Assistant[/bold green]",
-            "tool": "[bold magenta]Tool[/bold magenta]"
+            "tool": "[bold magenta]Tool[/bold magenta]",
         }
 
     def format_message(self, role: str, content: str) -> str:
@@ -38,4 +38,4 @@ class ChatFormatter:
 
     def print_streaming_content(self, content: str, end: str = ""):
         """Print streaming content with appropriate styling."""
-        self.console.print(content, end=end, highlight=False) 
+        self.console.print(content, end=end, highlight=False)

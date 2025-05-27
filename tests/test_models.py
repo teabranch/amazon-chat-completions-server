@@ -20,7 +20,7 @@ async def client():
 
 async def test_list_models_success(client: AsyncClient, test_api_key):
     """Test successful listing of models, expecting OpenAI models."""
-    headers = {"X-API-Key": test_api_key}
+    headers = {"Authorization": f"Bearer {test_api_key}"}
     response = await client.get("/v1/models", headers=headers)
     
     assert response.status_code == status.HTTP_200_OK
@@ -51,7 +51,7 @@ async def test_list_models_unauthorized_missing_key(client: AsyncClient):
 
 async def test_list_models_unauthorized_invalid_key(client: AsyncClient):
     """Test listing models with an invalid API key."""
-    headers = {"X-API-Key": "invalid-api-key"}
+    headers = {"Authorization": "Bearer invalid-api-key"}
     response = await client.get("/v1/models", headers=headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     content = response.json()

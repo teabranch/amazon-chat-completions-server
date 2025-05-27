@@ -1,5 +1,4 @@
 import pytest
-from typing import List, Dict, Any
 from pydantic import ValidationError
 
 from src.amazon_chat_completions_server.core.bedrock_models import (
@@ -167,81 +166,28 @@ class TestBedrockToOpenAIConversion:
     def test_claude_to_openai_messages_conversion(self):
         """Test Claude messages to OpenAI messages conversion"""
         # This will test the conversion logic once implemented
-        bedrock_messages = [
-            BedrockMessage(role="user", content="Hello"),
-            BedrockMessage(role="assistant", content="Hi there!")
-        ]
-        
         # Placeholder for conversion logic test
         # Expected OpenAI format:
-        expected_openai_messages = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"}
-        ]
-        
         # This test will be implemented once the conversion logic is created
-        assert True  # Placeholder
+        pass
     
     def test_titan_to_openai_messages_conversion(self):
         """Test Titan inputText to OpenAI messages conversion"""
-        titan_input = "Hello, how are you?"
-        
         # Expected OpenAI format:
-        expected_openai_messages = [
-            {"role": "user", "content": "Hello, how are you?"}
-        ]
-        
         # This test will be implemented once the conversion logic is created
-        assert True  # Placeholder
+        pass
     
     def test_system_prompt_extraction(self):
         """Test system prompt extraction from Claude format"""
-        claude_request = BedrockClaudeRequest(
-            max_tokens=1000,
-            messages=[
-                BedrockMessage(role="user", content="Hello")
-            ],
-            system="You are a helpful assistant."
-        )
-        
         # Expected: system prompt should be converted to OpenAI system message
-        expected_system_message = {"role": "system", "content": "You are a helpful assistant."}
-        
         # This test will be implemented once the conversion logic is created
-        assert True  # Placeholder
+        pass
     
     def test_tool_calls_conversion(self):
         """Test tool calls format conversion"""
-        bedrock_tool = BedrockTool(
-            name="get_weather",
-            description="Get weather information",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "location": {"type": "string"}
-                },
-                "required": ["location"]
-            }
-        )
-        
         # Expected OpenAI tool format
-        expected_openai_tool = {
-            "type": "function",
-            "function": {
-                "name": "get_weather",
-                "description": "Get weather information",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "location": {"type": "string"}
-                    },
-                    "required": ["location"]
-                }
-            }
-        }
-        
         # This test will be implemented once the conversion logic is created
-        assert True  # Placeholder
+        pass
 
 
 class TestBedrockResponses:

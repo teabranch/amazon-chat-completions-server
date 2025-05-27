@@ -1,6 +1,5 @@
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from typing import Dict, Any, List
+from unittest.mock import patch
 
 from src.amazon_chat_completions_server.adapters.bedrock_to_openai_adapter import BedrockToOpenAIAdapter
 from src.amazon_chat_completions_server.core.bedrock_models import (

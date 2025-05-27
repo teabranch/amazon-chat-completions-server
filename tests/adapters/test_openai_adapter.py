@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from src.amazon_chat_completions_server.adapters.openai_adapter import OpenAIAdapter
 from src.amazon_chat_completions_server.core.models import (
     Message,

@@ -177,7 +177,7 @@ $ amazon-chat serve --host 0.0.0.0 --port 8000
 🚀 Starting Amazon Chat Completions Server
 📍 Server URL: http://0.0.0.0:8000
 📚 API Documentation: http://0.0.0.0:8000/docs
-🔑 Authentication: API key required (X-API-Key header)
+🔑 Authentication: API key required (Authorization: Bearer header)
 
 INFO:     Started server process [12345]
 INFO:     Waiting for application startup.
@@ -406,7 +406,7 @@ amazon-chat chat --model gpt-4o-mini
 # 5. In another terminal, test API directly
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key" \
+  -H "Authorization: Bearer your-api-key" \
   -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hello!"}]}'
 ```
 

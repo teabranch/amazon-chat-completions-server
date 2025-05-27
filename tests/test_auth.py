@@ -1,9 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.testclient import TestClient
-import pytest
-import os
 
-from src.amazon_chat_completions_server.api.middleware.auth import verify_api_key, get_api_key, API_KEY_NAME
+from src.amazon_chat_completions_server.api.middleware.auth import verify_api_key
 from src.amazon_chat_completions_server.api.errors import http_exception_handler
 
 # Create a dummy app to test the dependency
@@ -20,7 +18,7 @@ async def secure_endpoint(api_key: str = Depends(verify_api_key)):
 client = TestClient(app)
 
 def test_verify_api_key_valid():
-    response = client.get("/secure", headers={API_KEY_NAME: "test-api-key"})
+    response = client.get("/secure", headers={"Authorization": "Bearer test-api-key"})
     assert response.status_code == 200
     assert response.json() == {"message": "success", "api_key": "test-api-key"}
 
@@ -36,7 +34,7 @@ def test_verify_api_key_missing():
     }
 
 def test_verify_api_key_invalid():
-    response = client.get("/secure", headers={API_KEY_NAME: "invalid_key"})
+    response = client.get("/secure", headers={"Authorization": "Bearer invalid_key"})
     assert response.status_code == 403
     assert response.json() == {
         "error": {

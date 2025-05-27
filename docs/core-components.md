@@ -496,10 +496,9 @@ async def claude_invoke_model(
 
 **Authentication Middleware**:
 ```python
-async def verify_api_key(api_key: str = Header(alias="X-API-Key")):
-    if not api_key or api_key != app_config.API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    return api_key
+async def verify_api_key(credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())):
+    # Implementation of verify_api_key function
+    pass
 ```
 
 **Logging Middleware**:

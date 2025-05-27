@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 
+
 class Message(BaseModel):
     role: str
     content: str
+
 
 class ChatCompletionRequest(BaseModel):
     model: str
@@ -12,11 +14,11 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: Optional[int] = None
     temperature: Optional[float] = 0.7
 
-    @field_validator('messages')
+    @field_validator("messages")
     @classmethod
     def messages_must_not_be_empty(cls, v):
         if not v:
-            raise ValueError('messages must not be empty')
+            raise ValueError("messages must not be empty")
         return v
 
     # Optional: Keep this if you want to add custom validation logic beyond min_items
@@ -24,4 +26,4 @@ class ChatCompletionRequest(BaseModel):
     # def messages_must_not_be_empty(cls, v):
     #     if not v:
     #         raise ValueError('messages must not be empty')
-    #     return v 
+    #     return v

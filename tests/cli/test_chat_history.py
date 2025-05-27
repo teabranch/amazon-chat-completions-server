@@ -1,6 +1,5 @@
 import pytest
 import os
-import json
 from datetime import datetime
 from src.amazon_chat_completions_server.cli.chat_history import ChatHistoryManager, ChatSession
 

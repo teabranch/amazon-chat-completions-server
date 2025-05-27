@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, AsyncGenerator, Optional, Union
 
-from ..core.models import Message, ChatCompletionResponse, ChatCompletionChunk, ChatCompletionRequest
+from ..core.models import Message, ChatCompletionResponse, ChatCompletionChunk
+
 
 class AbstractLLMService(ABC):
     """Abstract base class for a consistent LLM service interface."""
@@ -10,11 +11,13 @@ class AbstractLLMService(ABC):
     async def chat_completion(
         self,
         messages: List[Message],
-        model_id: Optional[str] = None, # Model ID might be inherent to the service instance or passed per call
+        model_id: Optional[
+            str
+        ] = None,  # Model ID might be inherent to the service instance or passed per call
         stream: bool = False,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        **kwargs # For other provider-specific parameters
+        **kwargs,  # For other provider-specific parameters
     ) -> Union[ChatCompletionResponse, AsyncGenerator[ChatCompletionChunk, None]]:
         """
         Sends a chat completion request to the LLM.
@@ -36,4 +39,4 @@ class AbstractLLMService(ABC):
     # Potentially add other common LLM operations here, e.g.:
     # @abstractmethod
     # async def generate_embeddings(self, texts: List[str], model_id: Optional[str] = None, **kwargs) -> Any:
-    #     pass 
+    #     pass

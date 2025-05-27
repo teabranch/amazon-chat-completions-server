@@ -5,9 +5,11 @@ import os
 from typing import List, Dict, Optional
 import uuid
 
+
 @dataclass
 class ChatSession:
     """Represents a chat session with history."""
+
     id: str
     model: str
     messages: List[Dict]
@@ -16,7 +18,7 @@ class ChatSession:
     name: Optional[str] = None
 
     @classmethod
-    def create_new(cls, model: str, name: Optional[str] = None) -> 'ChatSession':
+    def create_new(cls, model: str, name: Optional[str] = None) -> "ChatSession":
         """Create a new chat session."""
         now = datetime.now()
         return cls(
@@ -25,7 +27,7 @@ class ChatSession:
             messages=[],
             created_at=now,
             updated_at=now,
-            name=name
+            name=name,
         )
 
     def to_dict(self) -> Dict:
@@ -36,11 +38,11 @@ class ChatSession:
             "messages": self.messages,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
-            "name": self.name
+            "name": self.name,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'ChatSession':
+    def from_dict(cls, data: Dict) -> "ChatSession":
         """Create a session from a dictionary."""
         return cls(
             id=data["id"],
@@ -48,12 +50,13 @@ class ChatSession:
             messages=data["messages"],
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
-            name=data.get("name")
+            name=data.get("name"),
         )
+
 
 class ChatHistoryManager:
     """Manages chat session storage and retrieval."""
-    
+
     def __init__(self, storage_dir: str = "~/.amazon-chat/history"):
         self.storage_dir = os.path.expanduser(storage_dir)
         os.makedirs(self.storage_dir, exist_ok=True)
@@ -62,7 +65,7 @@ class ChatHistoryManager:
         """Save a chat session to disk."""
         filename = f"{session.id}.json"
         filepath = os.path.join(self.storage_dir, filename)
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(session.to_dict(), f, indent=2)
 
     def load_session(self, session_id: str) -> ChatSession:
@@ -80,11 +83,11 @@ class ChatHistoryManager:
         """List all available chat sessions."""
         sessions = []
         for filename in os.listdir(self.storage_dir):
-            if filename.endswith('.json'):
+            if filename.endswith(".json"):
                 try:
                     session = self.load_session(filename[:-5])
                     sessions.append(session)
-                except (json.JSONDecodeError, ValueError) as e:
+                except (json.JSONDecodeError, ValueError):
                     continue  # Skip invalid files
         return sorted(sessions, key=lambda s: s.updated_at, reverse=True)
 
@@ -100,4 +103,4 @@ class ChatHistoryManager:
     def update_session(self, session: ChatSession):
         """Update a chat session's content and timestamp."""
         session.updated_at = datetime.now()
-        self.save_session(session) 
+        self.save_session(session)

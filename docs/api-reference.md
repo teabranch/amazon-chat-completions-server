@@ -7,32 +7,41 @@ Complete reference for all API endpoints in the Amazon Chat Completions Server.
 ## 📋 Table of Contents
 
 - [Authentication](#authentication)
+- [Unified Endpoint](#unified-endpoint)
 - [Standard Endpoints](#standard-endpoints)
-- [Reverse Integration Endpoints](#reverse-integration-endpoints)
-- [Universal Endpoints](#universal-endpoints)
-- [Documentation Endpoints](#documentation-endpoints)
 - [Error Responses](#error-responses)
 - [Request/Response Examples](#requestresponse-examples)
 
 ## Authentication
 
-All API endpoints require authentication using an API key passed in the `X-API-Key` header.
+All API endpoints require authentication using an API key passed in the `Authorization` header with Bearer format.
 
 ```bash
-curl -H "X-API-Key: your-api-key" http://localhost:8000/endpoint
+curl -H "Authorization: Bearer your-api-key" http://localhost:8000/endpoint
 ```
 
 **Authentication Errors:**
 - `401 Unauthorized` - Missing or invalid API key
 - `403 Forbidden` - API key lacks required permissions
 
-## Standard Endpoints
+## Unified Endpoint
 
 ### POST /v1/chat/completions
 
-OpenAI-compatible chat completions endpoint.
+This is the **main unified endpoint** for all chat completion requests. It automatically:
 
-**Request Body:**
+- **Auto-detects input format** (OpenAI, Bedrock Claude, Bedrock Titan)
+- **Routes to appropriate provider** based on model ID
+- **Converts between formats** as needed
+- **Supports streaming and non-streaming** requests
+- **Maintains full compatibility** with OpenAI Chat Completions API
+
+**Query Parameters:**
+- `target_format` (optional): `openai`, `bedrock_claude`, or `bedrock_titan`
+
+**Request Body Examples:**
+
+**OpenAI Format:**
 ```json
 {
   "model": "gpt-4o-mini",
@@ -48,7 +57,34 @@ OpenAI-compatible chat completions endpoint.
 }
 ```
 
-**Response:**
+**Bedrock Claude Format:**
+```json
+{
+  "anthropic_version": "bedrock-2023-05-31",
+  "model": "anthropic.claude-3-haiku-20240307-v1:0",
+  "max_tokens": 1000,
+  "messages": [
+    {"role": "user", "content": "Hello!"}
+  ],
+  "temperature": 0.7,
+  "stream": false
+}
+```
+
+**Bedrock Titan Format:**
+```json
+{
+  "model": "amazon.titan-text-express-v1",
+  "inputText": "User: Hello!\n\nBot:",
+  "textGenerationConfig": {
+    "maxTokenCount": 1000,
+    "temperature": 0.7,
+    "stopSequences": []
+  }
+}
+```
+
+**Response (OpenAI Format - Default):**
 ```json
 {
   "id": "chatcmpl-123",
@@ -74,20 +110,59 @@ OpenAI-compatible chat completions endpoint.
 ```
 
 **Streaming Response:**
-When `stream: true`, returns Server-Sent Events:
+When `stream: true`, returns Server-Sent Events in the appropriate format based on the model and target format.
+
+**Format Conversion Example:**
+```bash
+# OpenAI input → Bedrock Claude output
+curl -X POST "http://localhost:8000/v1/chat/completions?target_format=bedrock_claude" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
 ```
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"role":"assistant","content":"Hello"},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"!"},"finish_reason":null}]}
+**Response (Bedrock Claude Format):**
+```json
+{
+  "id": "msg_123",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {"type": "text", "text": "Hello! How can I help you today?"}
+  ],
+  "model": "gpt-4o-mini",
+  "stop_reason": "end_turn",
+  "usage": {
+    "input_tokens": 9,
+    "output_tokens": 12
+  }
+}
+```
 
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+## Standard Endpoints
 
-data: [DONE]
+### GET /v1/chat/completions/health
+
+Health check for the unified endpoint.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-01T12:00:00Z",
+  "version": "1.0.0",
+  "message": "Unified model routing operational",
+  "supported_input_formats": ["openai", "bedrock_claude", "bedrock_titan"],
+  "model_routing": "enabled"
+}
 ```
 
 ### GET /v1/models
 
-List available models.
+List available models from all configured providers.
 
 **Response:**
 ```json
@@ -105,6 +180,12 @@ List available models.
       "object": "model",
       "created": 1677610602,
       "owned_by": "openai"
+    },
+    {
+      "id": "anthropic.claude-3-haiku-20240307-v1:0",
+      "object": "model",
+      "created": 1677610602,
+      "owned_by": "anthropic"
     }
   ]
 }
@@ -112,7 +193,7 @@ List available models.
 
 ### GET /health
 
-Health check endpoint.
+General health check endpoint.
 
 **Response:**
 ```json
@@ -126,209 +207,6 @@ Health check endpoint.
   }
 }
 ```
-
-## Reverse Integration Endpoints
-
-### POST /bedrock/claude/invoke-model
-
-Bedrock Claude format with OpenAI models.
-
-**Query Parameters:**
-- `openai_model` (optional) - OpenAI model to use (default: gpt-4o-mini)
-
-**Request Body:**
-```json
-{
-  "anthropic_version": "bedrock-2023-05-31",
-  "max_tokens": 1000,
-  "messages": [
-    {"role": "user", "content": "Hello!"}
-  ],
-  "system": "You are a helpful assistant.",
-  "temperature": 0.7,
-  "tools": [...],
-  "tool_choice": {"type": "auto"}
-}
-```
-
-**Response (Bedrock Claude format):**
-```json
-{
-  "id": "msg_123",
-  "type": "message",
-  "role": "assistant",
-  "content": [
-    {"type": "text", "text": "Hello! How can I help you today?"}
-  ],
-  "model": "gpt-4o-mini-2024-07-18",
-  "stop_reason": "end_turn",
-  "usage": {
-    "input_tokens": 9,
-    "output_tokens": 12
-  }
-}
-```
-
-### POST /bedrock/claude/invoke-model-stream
-
-Streaming version of Claude endpoint.
-
-**Query Parameters:**
-- `openai_model` (optional) - OpenAI model to use
-
-**Request Body:** Same as `/bedrock/claude/invoke-model`
-
-**Streaming Response:**
-```
-event: message_start
-data: {"type":"message_start","message":{"id":"msg_123","type":"message","role":"assistant","content":[],"model":"gpt-4o-mini","stop_reason":null,"usage":{"input_tokens":9,"output_tokens":0}}}
-
-event: content_block_start
-data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
-
-event: content_block_delta
-data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
-
-event: content_block_delta
-data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"!"}}
-
-event: content_block_stop
-data: {"type":"content_block_stop","index":0}
-
-event: message_delta
-data: {"type":"message_delta","delta":{"stop_reason":"end_turn","usage":{"output_tokens":12}}}
-
-event: message_stop
-data: {"type":"message_stop"}
-```
-
-### POST /bedrock/titan/invoke-model
-
-Bedrock Titan format with OpenAI models.
-
-**Query Parameters:**
-- `openai_model` (optional) - OpenAI model to use
-
-**Request Body:**
-```json
-{
-  "inputText": "User: Hello!\n\nBot:",
-  "textGenerationConfig": {
-    "maxTokenCount": 1000,
-    "temperature": 0.7,
-    "stopSequences": []
-  }
-}
-```
-
-**Response (Bedrock Titan format):**
-```json
-{
-  "inputTextTokenCount": 5,
-  "results": [
-    {
-      "tokenCount": 12,
-      "outputText": " Hello! How can I help you today?",
-      "completionReason": "FINISH"
-    }
-  ]
-}
-```
-
-### POST /bedrock/titan/invoke-model-stream
-
-Streaming version of Titan endpoint.
-
-**Query Parameters:**
-- `openai_model` (optional) - OpenAI model to use
-
-**Request Body:** Same as `/bedrock/titan/invoke-model`
-
-**Streaming Response:**
-```json
-{"outputText": " Hello"}
-{"outputText": "!"}
-{"outputText": " How"}
-{"outputText": " can"}
-{"outputText": " I"}
-{"outputText": " help"}
-{"outputText": " you"}
-{"outputText": " today"}
-{"outputText": "?"}
-{"completionReason": "FINISH"}
-```
-
-## Universal Endpoints
-
-### POST /v1/completions/universal
-
-Auto-detecting endpoint that handles any format.
-
-**Query Parameters:**
-- `target_provider` (optional) - Force output format: "openai" or "bedrock"
-- `model_override` (optional) - Override model selection
-
-**Request Body:** Any supported format (OpenAI, Bedrock Claude, or Bedrock Titan)
-
-**Response:** Matches input format unless overridden by `target_provider`
-
-**Examples:**
-
-1. **OpenAI input → OpenAI output:**
-```bash
-curl -X POST /v1/completions/universal \
-  -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hello"}]}'
-```
-
-2. **Bedrock input → Bedrock output:**
-```bash
-curl -X POST /v1/completions/universal \
-  -d '{"anthropic_version":"bedrock-2023-05-31","max_tokens":100,"messages":[{"role":"user","content":"Hello"}]}'
-```
-
-3. **OpenAI input → Bedrock output:**
-```bash
-curl -X POST /v1/completions/universal?target_provider=bedrock \
-  -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hello"}]}'
-```
-
-### POST /v1/completions/universal/stream
-
-Streaming version of universal endpoint.
-
-**Query Parameters:** Same as `/v1/completions/universal`
-
-**Request Body:** Any supported format
-
-**Response:** Streaming in detected or specified format
-
-### GET /v1/completions/universal/health
-
-Health check for universal endpoints.
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "supported_formats": ["openai", "bedrock_claude", "bedrock_titan"],
-  "format_detection": "enabled",
-  "streaming": "enabled"
-}
-```
-
-## Documentation Endpoints
-
-### GET /docs
-
-Interactive API documentation (Swagger UI).
-
-### GET /redoc
-
-Alternative API documentation (ReDoc).
-
-### GET /openapi.json
-
-OpenAPI schema in JSON format.
 
 ## Error Responses
 
@@ -362,6 +240,17 @@ All endpoints return consistent error responses:
     "type": "not_found_error",
     "message": "Model not found",
     "details": "Model 'invalid-model' is not supported"
+  }
+}
+```
+
+### 422 Unprocessable Entity
+```json
+{
+  "error": {
+    "type": "validation_error",
+    "message": "Request validation failed",
+    "details": "Field 'max_tokens' must be a positive integer"
   }
 }
 ```
@@ -403,10 +292,11 @@ All endpoints return consistent error responses:
 
 ### Multimodal Content
 
-**Request with image:**
+**Request with image (Bedrock Claude format):**
 ```json
 {
   "anthropic_version": "bedrock-2023-05-31",
+  "model": "anthropic.claude-3-haiku-20240307-v1:0",
   "max_tokens": 1000,
   "messages": [
     {
@@ -429,10 +319,11 @@ All endpoints return consistent error responses:
 
 ### Tool Calls
 
-**Request with tools:**
+**Request with tools (Bedrock Claude format):**
 ```json
 {
   "anthropic_version": "bedrock-2023-05-31",
+  "model": "anthropic.claude-3-haiku-20240307-v1:0",
   "max_tokens": 1000,
   "messages": [
     {"role": "user", "content": "What's the weather in London?"}
@@ -454,7 +345,7 @@ All endpoints return consistent error responses:
 }
 ```
 
-**Response with tool call:**
+**Response with tool call (Bedrock Claude format):**
 ```json
 {
   "id": "msg_123",
@@ -469,7 +360,7 @@ All endpoints return consistent error responses:
       "input": {"location": "London"}
     }
   ],
-  "model": "gpt-4o-mini",
+  "model": "anthropic.claude-3-haiku-20240307-v1:0",
   "stop_reason": "tool_use",
   "usage": {
     "input_tokens": 25,
@@ -518,6 +409,49 @@ All endpoints return consistent error responses:
 }
 ```
 
+### Streaming Example
+
+**Request:**
+```json
+{
+  "model": "gpt-4o-mini",
+  "messages": [
+    {"role": "user", "content": "Tell me a short story"}
+  ],
+  "stream": true
+}
+```
+
+**Streaming Response:**
+```
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"Once"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" upon"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" a"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" time..."},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+## Model Routing
+
+The unified endpoint automatically routes requests based on model ID patterns:
+
+### OpenAI Models
+- `gpt-*` (e.g., `gpt-4o-mini`, `gpt-3.5-turbo`)
+- `text-*` (e.g., `text-davinci-003`)
+- `dall-e-*` (e.g., `dall-e-3`)
+
+### Bedrock Models
+- `anthropic.*` (e.g., `anthropic.claude-3-haiku-20240307-v1:0`)
+- `amazon.*` (e.g., `amazon.titan-text-express-v1`)
+- `ai21.*`, `cohere.*`, `meta.*`
+- Regional formats: `us.anthropic.*`, `eu.anthropic.*`
+
 ## Rate Limits
 
 - **Default**: 100 requests per minute per API key
@@ -539,4 +473,4 @@ Cross-Origin Resource Sharing (CORS) is enabled for all origins in development. 
 
 ---
 
-This API reference provides complete documentation for all endpoints. For interactive testing, visit `/docs` when the server is running. 
+This API reference provides complete documentation for the unified endpoint. For interactive testing, visit `/docs` when the server is running. 

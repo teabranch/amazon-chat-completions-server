@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from typing import List
 
 from ..middleware.auth import verify_api_key
-from src.amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
-from src.amazon_chat_completions_server.core.models import ModelProviderInfo # Core model from service
-from ..schemas.responses import ModelListResponse, ModelInfo # API response models
+from src.amazon_chat_completions_server.services.llm_service_factory import (
+    LLMServiceFactory,
+)
+from src.amazon_chat_completions_server.core.models import (
+    ModelProviderInfo,
+)  # Core model from service
+from ..schemas.responses import ModelListResponse, ModelInfo  # API response models
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,19 +18,28 @@ router = APIRouter()
 # or allow specifying a provider.
 # For now, we'll try to list from OpenAI and Bedrock (when implemented) and combine.
 
-@router.get("/v1/models", response_model=ModelListResponse, dependencies=[Depends(verify_api_key)])
-async def list_models_route(): # Renamed to avoid conflict with imported list_models
+
+@router.get(
+    "/v1/models",
+    response_model=ModelListResponse,
+    dependencies=[Depends(verify_api_key)],
+)
+async def list_models_route():  # Renamed to avoid conflict with imported list_models
     """Lists available models from configured LLM providers, conforming to OpenAI spec."""
     all_provider_models: List[ModelProviderInfo] = []
-    
+
     try:
         openai_service = LLMServiceFactory.get_service("openai")
-        if hasattr(openai_service, 'list_models') and callable(openai_service.list_models):
+        if hasattr(openai_service, "list_models") and callable(
+            openai_service.list_models
+        ):
             openai_models = await openai_service.list_models()
             all_provider_models.extend(openai_models)
             logger.info(f"Fetched {len(openai_models)} models from OpenAI.")
         else:
-            logger.warning("OpenAI service does not have a callable list_models method.")
+            logger.warning(
+                "OpenAI service does not have a callable list_models method."
+            )
     except Exception as e:
         logger.error(f"Error listing models from OpenAI: {e}")
 
@@ -53,7 +66,7 @@ async def list_models_route(): # Renamed to avoid conflict with imported list_mo
             ModelInfo(
                 id=p_model.id,
                 # object="model", # Default in ModelInfo
-                owned_by=p_model.provider, # Map provider to owned_by
+                owned_by=p_model.provider,  # Map provider to owned_by
                 # created=p_model.created, # If ModelProviderInfo had created timestamp
                 # display_name=p_model.display_name # If you want to include this
             )
@@ -62,8 +75,9 @@ async def list_models_route(): # Renamed to avoid conflict with imported list_mo
     if not api_model_list:
         logger.warning("No models could be fetched or mapped.")
         # Return based on spec: an object with an empty data list
-    
+
     return ModelListResponse(data=api_model_list)
 
+
 # TODO: Implement model listing endpoint
-# @router.get("/v1/models") 
+# @router.get("/v1/models")

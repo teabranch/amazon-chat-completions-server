@@ -62,6 +62,9 @@ RUN adduser \
 # Copy installed Python packages from the builder stage
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
+# Copy the executable scripts from the builder stage
+COPY --from=builder /usr/local/bin /usr/local/bin
+
 # Copy the application source code from the builder stage
 COPY --from=builder /app/src ./src
 
@@ -71,14 +74,24 @@ COPY --from=builder /app/.env.example ./.env.example
 # Switch to the non-privileged user
 USER appuser
 
+# Add the current directory to Python path so src module can be found
+ENV PYTHONPATH="/app:${PYTHONPATH}"
+
 # Define an argument for the port, with a default value
 ARG PORT=8000
 
-# Expose the port the app runs on. This uses the PORT argument.
+# Set PORT as environment variable so it can be overridden at runtime
+ENV PORT=${PORT}
+
+# Expose the port the app runs on. This uses the PORT environment variable.
 # This line doesn't publish the port but documents which port is intended to be published.
 EXPOSE ${PORT}
 
+# Add health check for container runtime
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
 # Command to run the main application script when the container launches
-# This runs the application as a server using uvicorn on the specified PORT.
+# This runs the application as a server using the CLI command with dynamic port configuration.
 # Users can override this command to run their own scripts that use this library.
-CMD ["uvicorn", "src.amazon_chat_completions_server.main:app", "--host", "0.0.0.0", "--port", "${PORT}"] 
+CMD ["sh", "-c", "amazon-chat serve --host 0.0.0.0 --port ${PORT}"] 

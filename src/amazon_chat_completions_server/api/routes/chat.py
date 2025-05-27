@@ -1,176 +1,358 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, HTTPException, status
-from ..schemas.requests import ChatCompletionRequest as APIRequest # API layer schema
-from ..middleware.auth import verify_api_key
-from src.amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
-# Import custom exceptions from the service layer and core
-from src.amazon_chat_completions_server.core.exceptions import (
-    ConfigurationError, 
-    ModelNotFoundError,
-    ServiceAuthenticationError, 
-    ServiceModelNotFoundError, 
-    ServiceApiError,
-    ServiceUnavailableError
+from fastapi import (
+    APIRouter,
+    status,
+    Depends,
+    HTTPException,
+    Query,
 )
-from src.amazon_chat_completions_server.core.models import Message as CoreMessage # Service layer model
+from fastapi.responses import StreamingResponse
+from typing import Dict, Any, Optional
 import json
 import logging
-import os
+from pydantic import ValidationError
+
+from src.amazon_chat_completions_server.services.llm_service_factory import (
+    LLMServiceFactory,
+)
+
+# Import custom exceptions from the service layer and core
+from src.amazon_chat_completions_server.core.exceptions import (
+    ConfigurationError,
+    ModelNotFoundError,
+    ServiceAuthenticationError,
+    ServiceModelNotFoundError,
+    ServiceApiError,
+    ServiceUnavailableError,
+    LLMIntegrationError,
+)
+from src.amazon_chat_completions_server.core.models import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+)
+
+# Imports for unified logic
+from ..middleware.auth import verify_api_key
+from ...utils.request_detector import RequestFormatDetector, RequestFormat
+from ...adapters.bedrock_to_openai_adapter import BedrockToOpenAIAdapter
+from ...core.bedrock_models import BedrockClaudeRequest, BedrockTitanRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("/v1/chat/completions", dependencies=[Depends(verify_api_key)])
-async def chat_completions(
-    request: APIRequest,
-):
-    try:
-        llm_service = LLMServiceFactory.get_service_for_model(request.model)
-    except ModelNotFoundError as e: # From Factory if model alias is unknown
-        logger.warning(f"Model not found via factory for '{request.model}': {e}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except ConfigurationError as e: # From Service init (e.g. missing API key)
-        logger.error(f"Configuration error for model '{request.model}': {e}")
-        # This is a server-side configuration issue, so 500 is appropriate.
-        # Could argue for 503 if it's a temporary config issue preventing service start.
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Server configuration error: {str(e)}")
-    except NotImplementedError as e: # From Factory if service not implemented
-        logger.error(f"Service not implemented for model '{request.model}': {e}")
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
-    except Exception as e: # Catch any other unexpected errors during service retrieval
-        logger.error(f"Unexpected error getting LLM service for model '{request.model}': {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unexpected error obtaining LLM service: {str(e)}")
 
-    core_messages = [CoreMessage(**msg.model_dump()) for msg in request.messages]
+# Helper function to determine target Bedrock type
+def get_target_bedrock_type(target_format: str) -> Optional[str]:
+    if "claude" in target_format.lower():
+        return "claude"
+    if "titan" in target_format.lower():
+        return "titan"
+    return None
+
+
+# Service retrieval logic
+def get_service_and_format_details(
+    request_data: Dict[str, Any], target_format_query: Optional[str] = None
+):
+    detected_input_format = RequestFormatDetector.detect_format(request_data)
+    logger.debug(f"Detected input format: {detected_input_format}")
+
+    model_id = None
+    if detected_input_format == RequestFormat.OPENAI:
+        model_id = request_data.get("model")
+    elif detected_input_format == RequestFormat.BEDROCK_CLAUDE:
+        model_id = request_data.get("model") or request_data.get("model_id")
+    elif detected_input_format == RequestFormat.BEDROCK_TITAN:
+        model_id = request_data.get("model")
+
+    if not model_id:
+        model_id = request_data.get("model")  # Generic fallback
+        if not model_id:
+            raise ModelNotFoundError(
+                "Could not determine model_id from request for routing."
+            )
+
+    logger.debug(f"Extracted model_id for routing: {model_id}")
+
+    service = LLMServiceFactory.get_service_for_model(model_id)
+    actual_provider = service.provider_name
+    logger.debug(
+        f"Service obtained for model_id '{model_id}': Provider '{actual_provider}'"
+    )
+
+    # Determine target_format_enum based on query, provider, and input
+    target_format_enum = RequestFormat.OPENAI  # Default output
+    if target_format_query:
+        if "claude" in target_format_query.lower():
+            target_format_enum = RequestFormat.BEDROCK_CLAUDE
+        elif "titan" in target_format_query.lower():
+            target_format_enum = RequestFormat.BEDROCK_TITAN
+        elif "openai" in target_format_query.lower():
+            target_format_enum = RequestFormat.OPENAI
+        else:
+            logger.warning(
+                f"Unsupported target_format query: {target_format_query}. Defaulting to OpenAI."
+            )
+
+    logger.debug(
+        f"Input format: {detected_input_format}, Actual provider: {actual_provider}, Target output format: {target_format_enum.value}"
+    )
+
+    return service, model_id, detected_input_format, target_format_enum
+
+
+@router.post(
+    "/v1/chat/completions", dependencies=[Depends(verify_api_key)], response_model=None
+)
+async def unified_chat_completions(
+    request_data: Dict[str, Any],
+    target_format: Optional[str] = Query(
+        None,
+        description="Target response format: openai, bedrock_claude, bedrock_titan. If not specified, defaults to OpenAI or source format if applicable.",
+        alias="target_format",
+    ),
+):
+    """
+    Unified OpenAI-compatible chat completions endpoint.
     
+    Handles both streaming and non-streaming requests based on the 'stream' parameter.
+    Routes requests based on model_id and supports format conversion.
+    """
     try:
-        response_data = await llm_service.chat_completion(
-            messages=core_messages,
-            model_id=request.model,
-            stream=False,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
-            # Pass other relevant parameters from request if your service method accepts them
-            # e.g., tools=request.tools, tool_choice=request.tool_choice
-        )
-        return response_data
+        (
+            compute_service,
+            actual_model_id_for_compute,
+            input_request_format,
+            target_format_enum,
+        ) = get_service_and_format_details(request_data, target_format)
+
+        # Parse the request into OpenAI DTO format
+        openai_dto_request: ChatCompletionRequest
+        if input_request_format == RequestFormat.OPENAI:
+            try:
+                openai_dto_request = ChatCompletionRequest(**request_data)
+            except ValidationError as e:
+                logger.error(f"Validation error parsing OpenAI request: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Invalid OpenAI request format: {str(e)}",
+                )
+            except Exception as e:
+                logger.error(f"Error parsing OpenAI request: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid OpenAI request format: {str(e)}",
+                )
+        elif input_request_format in [
+            RequestFormat.BEDROCK_CLAUDE,
+            RequestFormat.BEDROCK_TITAN,
+        ]:
+            try:
+                bedrock_request_model = (
+                    BedrockClaudeRequest
+                    if input_request_format == RequestFormat.BEDROCK_CLAUDE
+                    else BedrockTitanRequest
+                )
+                bedrock_request = bedrock_request_model(**request_data)
+                adapter = BedrockToOpenAIAdapter(
+                    openai_model_id=actual_model_id_for_compute
+                )
+                openai_dto_request = adapter.convert_bedrock_to_openai_request(
+                    bedrock_request
+                )
+            except Exception as e:
+                logger.error(f"Error converting Bedrock request to OpenAI DTO: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid Bedrock request or conversion error: {str(e)}",
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported input request format: {input_request_format}",
+            )
+
+        # Ensure model matches the one determined for compute
+        if openai_dto_request.model != actual_model_id_for_compute:
+            logger.warning(
+                f"Request model '{openai_dto_request.model}' overridden to '{actual_model_id_for_compute}' by routing logic."
+            )
+            openai_dto_request.model = actual_model_id_for_compute
+
+        # Check if this is a streaming request
+        is_streaming = openai_dto_request.stream or False
+        
+        if is_streaming:
+            # Handle streaming response
+            logger.debug(f"Processing streaming request for model: {actual_model_id_for_compute}")
+            
+            async def generate_stream_response():
+                try:
+                    response = await compute_service.chat_completion_with_request(openai_dto_request)
+                    
+                    # For streaming endpoints, we expect an async generator
+                    if not (hasattr(response, '__aiter__') and hasattr(response, '__anext__')):
+                        logger.error("Received non-streaming response from streaming service call")
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Service configuration error: non-streaming response from streaming endpoint",
+                        )
+                    
+                    openai_stream = response
+
+                    target_bedrock_type_for_conversion = None
+                    if (
+                        target_format_enum == RequestFormat.BEDROCK_CLAUDE
+                        or target_format_enum == RequestFormat.BEDROCK_TITAN
+                    ):
+                        target_bedrock_type_for_conversion = get_target_bedrock_type(
+                            target_format_enum.value
+                        )
+                        if not target_bedrock_type_for_conversion:
+                            logger.error(
+                                f"Streaming: Could not determine target Bedrock type from format enum: {target_format_enum.value}. No conversion will be applied."
+                            )
+
+                    # Initialize adapter with the model determined for compute
+                    response_adapter = BedrockToOpenAIAdapter(
+                        openai_model_id=actual_model_id_for_compute
+                    )
+                    first_chunk_processed = False
+
+                    async for chunk in openai_stream:
+                        # Update adapter if the first chunk from OpenAI contains a more specific model ID
+                        if (
+                            not first_chunk_processed
+                            and chunk.model
+                            and response_adapter.openai_model_id != chunk.model
+                        ):
+                            response_adapter = BedrockToOpenAIAdapter(
+                                openai_model_id=chunk.model
+                            )
+                        first_chunk_processed = True
+
+                        if target_bedrock_type_for_conversion:
+                            bedrock_chunk = (
+                                response_adapter._convert_openai_chunk_to_bedrock(
+                                    chunk,
+                                    original_format=target_bedrock_type_for_conversion,
+                                )
+                            )
+                            if bedrock_chunk:
+                                yield f"data: {json.dumps(bedrock_chunk.model_dump(exclude_none=True))}\n\n"
+                        else:  # Yield OpenAI chunk
+                            yield f"data: {json.dumps(chunk.model_dump(exclude_none=True))}\n\n"
+
+                except HTTPException:
+                    raise
+                except Exception as e_stream:
+                    logger.error(
+                        f"Error during stream generation: {e_stream}", exc_info=True
+                    )
+                    error_payload = {
+                        "error": {
+                            "message": f"Streaming error: {str(e_stream)}",
+                            "type": type(e_stream).__name__,
+                        }
+                    }
+                    yield f"data: {json.dumps(error_payload)}\n\n"
+
+            return StreamingResponse(
+                generate_stream_response(), media_type="text/event-stream"
+            )
+        
+        else:
+            # Handle non-streaming response
+            logger.debug(f"Processing non-streaming request for model: {actual_model_id_for_compute}")
+            
+            response = await compute_service.chat_completion_with_request(openai_dto_request)
+            
+            # For non-streaming endpoints, we expect a ChatCompletionResponse object
+            if hasattr(response, '__aiter__') and hasattr(response, '__anext__'):
+                logger.error("Received streaming response from non-streaming service call")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Service configuration error: streaming response from non-streaming endpoint",
+                )
+            
+            # Ensure we have a proper ChatCompletionResponse object
+            if not hasattr(response, 'id') or not hasattr(response, 'choices'):
+                logger.error(f"Invalid response type from service: {type(response)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Invalid response format from service",
+                )
+            
+            openai_response_dto: ChatCompletionResponse = response
+
+            # Convert response to target format if needed
+            if (
+                target_format_enum == RequestFormat.BEDROCK_CLAUDE
+                or target_format_enum == RequestFormat.BEDROCK_TITAN
+            ):
+                target_bedrock_type = get_target_bedrock_type(target_format_enum.value)
+                if not target_bedrock_type:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Could not determine target Bedrock type from format: {target_format_enum.value}",
+                    )
+
+                adapter = BedrockToOpenAIAdapter(
+                    openai_model_id=openai_response_dto.model
+                )
+                bedrock_response = adapter.convert_openai_to_bedrock_response(
+                    openai_response_dto, original_format=target_bedrock_type
+                )
+                return bedrock_response.model_dump(exclude_none=True)
+            else:
+                # Return OpenAI format
+                return openai_response_dto.model_dump(exclude_none=True)
+
+    except ModelNotFoundError as e:
+        logger.warning(f"Model not found: {e}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ServiceAuthenticationError as e:
-        logger.error(f"Service Authentication Error for model {request.model}: {e}")
+        logger.error(f"Service Authentication Error: {e}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-    except ServiceModelNotFoundError as e: # From Service if model not found by provider
-        logger.error(f"Service Model Not Found Error for model {request.model}: {e}")
+    except ServiceModelNotFoundError as e:
+        logger.error(f"Service Model Not Found Error: {e}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ServiceUnavailableError as e:
-        logger.error(f"Service Unavailable Error for model {request.model}: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
-    except ServiceApiError as e: # Generic API error from the service
-        logger.error(f"Service API Error for model {request.model}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    except ValueError as e: # e.g. if model_id was somehow None in service call, or other validation
-        logger.warning(f"ValueError during chat completion for model {request.model}: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e: # Catch-all for other unexpected errors during the call
-        logger.error(f"Unexpected error during non-streaming chat completion for model {request.model}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"LLM service error: {str(e)}")
-
-@router.websocket("/v1/chat/completions/stream")
-async def chat_completion_stream(websocket: WebSocket):
-    await websocket.accept()
-    llm_service = None
-    request_model_id = None # Initialize to avoid UnboundLocalError in finally if init fails
-    
-    try:
-        initial_data_text = await websocket.receive_text()
-        initial_data = json.loads(initial_data_text)
-
-        server_api_key = os.getenv("API_KEY")
-        client_sent_api_key = initial_data.pop("api_key", None)
-
-        if not server_api_key or client_sent_api_key != server_api_key:
-            logger.warning("WebSocket authentication failed: Invalid or missing API key.")
-            await websocket.send_json({"error": "Authentication failed", "code": status.WS_1008_POLICY_VIOLATION}) # Use standard code
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
-
-        request_model_id = initial_data.get("model")
-        api_messages = initial_data.get("messages", [])
-        if not request_model_id or not api_messages:
-            logger.warning("WebSocket request missing model or messages.")
-            await websocket.send_json({"error": "Missing model or messages in request", "code": status.WS_1003_UNSUPPORTED_DATA}) # Or 1007 for invalid format
-            await websocket.close(code=status.WS_1003_UNSUPPORTED_DATA)
-            return
-        
-        # Validate messages format if necessary, e.g. using Pydantic models
-        # For simplicity, direct conversion is shown.
-        core_messages = [CoreMessage(**msg) for msg in api_messages]
-
-        llm_service = LLMServiceFactory.get_service_for_model(request_model_id)
-        
-        # Get the streaming response generator
-        stream_response = await llm_service.chat_completion(
-            messages=core_messages, 
-            model_id=request_model_id, 
-            stream=True,
-            temperature=initial_data.get("temperature"),
-            max_tokens=initial_data.get("max_tokens")
-            # Pass other relevant params from initial_data
+        logger.error(f"Service Unavailable Error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
         )
-        
-        # Ensure we got an async generator
-        if not hasattr(stream_response, '__aiter__'):
-            logger.error(f"Expected async generator from chat_completion, got {type(stream_response)}")
-            await websocket.send_json({"error": "Internal server error", "code": status.WS_1011_INTERNAL_ERROR})
-            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
-            return
+    except (ServiceApiError, LLMIntegrationError, ConfigurationError) as e:
+        logger.error(f"Service/Integration Error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    except ValueError as e:
+        logger.warning(f"ValueError in unified endpoint: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except ValidationError as e:
+        logger.warning(f"Pydantic validation error in unified endpoint: {e}")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except HTTPException:
+        # Re-raise HTTPExceptions without modification
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in unified endpoint: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred: {str(e)}",
+        )
 
-        # Stream the chunks to the client
-        async for chunk in stream_response:
-            await websocket.send_json(chunk.model_dump())
-        
-        # Normal closure after streaming all chunks
-        await websocket.close(code=status.WS_1000_NORMAL_CLOSURE)
 
-    except WebSocketDisconnect:
-        logger.info(f"Client disconnected from WebSocket (model: {request_model_id}).")
-    except json.JSONDecodeError:
-        logger.warning("WebSocket received invalid JSON.")
-        # Try to send error, then close. Websocket might already be closing.
-        try:
-            await websocket.send_json({"error": "Invalid JSON format", "code": status.WS_1007_INVALID_FRAME_PAYLOAD_DATA})
-        except Exception: pass
-        try:
-            await websocket.close(code=status.WS_1007_INVALID_FRAME_PAYLOAD_DATA)
-        except Exception: pass
-    except (ModelNotFoundError, ServiceModelNotFoundError) as e:
-        logger.warning(f"WebSocket: Model not found for '{request_model_id}': {e}")
-        error_payload = {"error": f"Model not found: {str(e)}", "code": 4004} # Custom app code
-        try: await websocket.send_json(error_payload)
-        except Exception: pass
-        try: await websocket.close(code=status.WS_1008_POLICY_VIOLATION) # Model not found could be policy issue
-        except Exception: pass
-    except (ConfigurationError, ServiceAuthenticationError) as e:
-        logger.error(f"WebSocket: Configuration or Auth Error for model '{request_model_id}': {e}")
-        error_payload = {"error": f"Configuration or Authentication Error: {str(e)}", "code": 4003} # Custom app code
-        try: await websocket.send_json(error_payload)
-        except Exception: pass
-        try: await websocket.close(code=status.WS_1008_POLICY_VIOLATION) # Auth/config issues are policy
-        except Exception: pass
-    except (ServiceApiError, ServiceUnavailableError, NotImplementedError) as e:
-        logger.error(f"WebSocket: Service API/Unavailable/NotImplemented Error for model '{request_model_id}': {e}")
-        error_payload = {"error": f"LLM Service Error: {str(e)}", "code": 5003} # Custom app code for general service issues
-        try: await websocket.send_json(error_payload)
-        except Exception: pass
-        try: await websocket.close(code=status.WS_1011_INTERNAL_ERROR) # Service error is internal
-        except Exception: pass
-    except Exception as e: # Generic catch-all for other errors
-        logger.error(f"Generic WebSocket Error (model: {request_model_id}): {type(e).__name__} - {e}")
-        error_payload = {"error": f"Unexpected WebSocket error: {str(e)}", "code": 5000} # Custom general error
-        try:
-            await websocket.send_json(error_payload)
-        except Exception: pass # Websocket might already be closed
-    finally:
-        # Ensure graceful closure if not already closed
-        if websocket.client_state != websocket.client_state.DISCONNECTED:
-            try:
-                await websocket.close(code=status.WS_1001_GOING_AWAY if llm_service else status.WS_1011_INTERNAL_ERROR)
-            except RuntimeError: # Already closed
-                pass 
+@router.get("/v1/chat/completions/health")
+async def unified_health():
+    """Health check for the unified chat completions endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": "2024-01-01T12:00:00Z",
+        "version": "1.0.0",
+        "message": "Unified chat completions endpoint operational",
+        "supported_input_formats": ["openai", "bedrock_claude", "bedrock_titan"],
+        "model_routing": "enabled",
+        "streaming_support": "enabled",
+        "routing_method": "model_id_based"
+    }

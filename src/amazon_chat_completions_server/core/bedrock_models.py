@@ -1,17 +1,19 @@
 from typing import List, Optional, Literal, Dict, Any, Union
 from pydantic import BaseModel, Field, field_validator
+from enum import Enum
 
 
 class BedrockContentBlock(BaseModel):
     """Bedrock content block for multimodal content"""
+
     type: str
     text: Optional[str] = None
     source: Optional[Dict[str, Any]] = None  # For image content
-    
-    @field_validator('type')
+
+    @field_validator("type")
     @classmethod
     def validate_type(cls, v):
-        allowed_types = ['text', 'image', 'tool_use', 'tool_result']
+        allowed_types = ["text", "image", "tool_use", "tool_result"]
         if v not in allowed_types:
             raise ValueError(f"Content block type must be one of {allowed_types}")
         return v
@@ -19,10 +21,11 @@ class BedrockContentBlock(BaseModel):
 
 class BedrockMessage(BaseModel):
     """Bedrock message format"""
+
     role: Literal["user", "assistant"]
     content: Union[str, List[BedrockContentBlock]]
-    
-    @field_validator('content', mode='before')
+
+    @field_validator("content", mode="before")
     @classmethod
     def validate_content(cls, v):
         if isinstance(v, str):
@@ -36,7 +39,9 @@ class BedrockMessage(BaseModel):
                 elif isinstance(item, BedrockContentBlock):
                     content_blocks.append(item)
                 else:
-                    raise ValueError("Content list items must be dicts or BedrockContentBlock instances")
+                    raise ValueError(
+                        "Content list items must be dicts or BedrockContentBlock instances"
+                    )
             return content_blocks
         else:
             raise ValueError("Content must be string or list of content blocks")
@@ -44,6 +49,7 @@ class BedrockMessage(BaseModel):
 
 class BedrockTool(BaseModel):
     """Bedrock tool definition"""
+
     name: str
     description: str
     input_schema: Dict[str, Any]
@@ -51,19 +57,21 @@ class BedrockTool(BaseModel):
 
 class BedrockToolChoice(BaseModel):
     """Bedrock tool choice specification"""
+
     type: Literal["auto", "any", "tool"]
     name: Optional[str] = None  # Required when type is "tool"
-    
-    @field_validator('name')
+
+    @field_validator("name")
     @classmethod
     def validate_name_for_tool_type(cls, v, info):
-        if info.data.get('type') == 'tool' and not v:
+        if info.data.get("type") == "tool" and not v:
             raise ValueError("name is required when type is 'tool'")
         return v
 
 
 class BedrockClaudeRequest(BaseModel):
     """Bedrock Claude request format"""
+
     anthropic_version: str = "bedrock-2023-05-31"
     max_tokens: int = Field(..., gt=0)
     messages: List[BedrockMessage] = Field(..., min_length=1)
@@ -74,8 +82,8 @@ class BedrockClaudeRequest(BaseModel):
     stop_sequences: Optional[List[str]] = None
     tools: Optional[List[BedrockTool]] = None
     tool_choice: Optional[Union[str, BedrockToolChoice]] = None
-    
-    @field_validator('tool_choice', mode='before')
+
+    @field_validator("tool_choice", mode="before")
     @classmethod
     def validate_tool_choice(cls, v):
         if isinstance(v, str):
@@ -88,6 +96,7 @@ class BedrockClaudeRequest(BaseModel):
 
 class BedrockTitanConfig(BaseModel):
     """Bedrock Titan text generation configuration"""
+
     maxTokenCount: int = Field(..., gt=0)
     temperature: Optional[float] = Field(None, ge=0.0, le=1.0)
     topP: Optional[float] = Field(None, ge=0.0, le=1.0)
@@ -96,12 +105,14 @@ class BedrockTitanConfig(BaseModel):
 
 class BedrockTitanRequest(BaseModel):
     """Bedrock Titan request format"""
+
     inputText: str
     textGenerationConfig: BedrockTitanConfig
 
 
 class BedrockClaudeResponse(BaseModel):
     """Bedrock Claude response format"""
+
     id: str
     type: str = "message"
     role: Literal["assistant"]
@@ -114,6 +125,7 @@ class BedrockClaudeResponse(BaseModel):
 
 class BedrockTitanResult(BaseModel):
     """Bedrock Titan result"""
+
     tokenCount: int
     outputText: str
     completionReason: Literal["FINISH", "LENGTH", "CONTENT_FILTERED"]
@@ -121,6 +133,7 @@ class BedrockTitanResult(BaseModel):
 
 class BedrockTitanResponse(BaseModel):
     """Bedrock Titan response format"""
+
     inputTextTokenCount: int
     results: List[Dict[str, Any]]  # Using Dict to match the test expectations
 
@@ -128,6 +141,7 @@ class BedrockTitanResponse(BaseModel):
 # Streaming response models
 class BedrockClaudeStreamChunk(BaseModel):
     """Bedrock Claude streaming chunk"""
+
     type: str
     index: Optional[int] = None
     delta: Optional[Dict[str, Any]] = None
@@ -137,6 +151,7 @@ class BedrockClaudeStreamChunk(BaseModel):
 
 class BedrockTitanStreamChunk(BaseModel):
     """Bedrock Titan streaming chunk"""
+
     outputText: str
     index: int
     totalOutputTextTokenCount: Optional[int] = None
@@ -144,8 +159,8 @@ class BedrockTitanStreamChunk(BaseModel):
 
 
 # Enum for request format detection
-class RequestFormat(str):
+class RequestFormat(str, Enum):
     OPENAI = "openai"
     BEDROCK_CLAUDE = "bedrock_claude"
     BEDROCK_TITAN = "bedrock_titan"
-    UNKNOWN = "unknown" 
+    UNKNOWN = "unknown"
