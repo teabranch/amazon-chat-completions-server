@@ -64,3 +64,4 @@ exclude:
 github:
   repository_name: amazon-chat-completions-server
   repository_url: https://github.com/teabranch/amazon-chat-completions-server 
+  repository: teabranch/amazon-chat-completions-server
