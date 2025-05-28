@@ -13,6 +13,15 @@ ARG UV_VERSION=0.1.40
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Install system dependencies needed for building Python packages
+# This is especially important for ARM architectures where wheels may not be available
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 RUN pip install --no-cache-dir uv==${UV_VERSION}
 
@@ -46,6 +55,9 @@ ENV PYTHONUNBUFFERED=1
 
 # Set the working directory in the container
 WORKDIR /app
+
+# Install curl for health check (must be done before switching to non-privileged user)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
