@@ -1,0 +1,21 @@
+name: Container Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-container:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag accs:test
+    - name: Run the container
+      run: docker run -d -p 8080:8080 accs:test # Adjust port mapping as needed
+    - name: Wait for container to start
+      run: sleep 10 # Adjust as necessary
+    - name: Run tests against container
+      run: echo "Run your container tests here" # Replace with your actual test command, e.g., curl localhost:8080/health or run a test script 
