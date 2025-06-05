@@ -4,8 +4,8 @@
 # Use an official Python runtime as a parent image for the builder stage
 FROM python:3.12-slim AS builder
 
-# Argument for uv version
-ARG UV_VERSION=0.1.40
+# Argument for uv version - updated to latest for better ARM support
+ARG UV_VERSION=0.4.30
 
 # Set Python environment variables
 # PYTHONDONTWRITEBYTECODE: Prevents Python from writing .pyc files to disc (improves performance and avoids clutter)
@@ -13,32 +13,45 @@ ARG UV_VERSION=0.1.40
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Set pip environment variables for better ARM performance
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
 # Install system dependencies needed for building Python packages
 # This is especially important for ARM architectures where wheels may not be available
+# Added more build tools for better ARM compatibility
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
     g++ \
     python3-dev \
+    libffi-dev \
+    libssl-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-RUN pip install --no-cache-dir uv==${UV_VERSION}
+# Install uv - use the installer for better ARM support
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy pyproject.toml first to leverage Docker layer caching for dependencies
-COPY pyproject.toml ./pyproject.toml
+# Copy dependency files first to leverage Docker layer caching
+COPY pyproject.toml ./
+COPY uv.lock ./
+
+# Pre-install dependencies to improve caching
+# Using uv sync for better dependency resolution and ARM wheel handling
+RUN uv venv --system-site-packages && \
+    uv pip install --system --no-deps setuptools wheel && \
+    uv sync --system --no-dev --no-install-project
 
 # Copy the source code
-# The source code is in 'src' and mapped in pyproject.toml
 COPY src ./src
 
-# Install project dependencies using uv
-# Using --system to install into the system Python.
-# This installs the project "amazon-chat-completions-server" and its dependencies.
-RUN uv pip install --no-cache-dir --system .
+# Install the project itself
+RUN uv pip install --system --no-deps .
 
 # Copy other necessary files that might be needed by the application or for reference
 # .env.example is useful for understanding required environment variables

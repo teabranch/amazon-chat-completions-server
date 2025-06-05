@@ -1,5 +1,5 @@
 import pytest
-from src.amazon_chat_completions_server.core.models import (
+from src.open_amazon_chat_completions_server.core.models import (
     Message,
     ChatCompletionRequest,
     ChatCompletionResponse,

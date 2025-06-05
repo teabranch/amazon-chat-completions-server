@@ -1,7 +1,7 @@
 import pytest
 import os
 from datetime import datetime
-from src.amazon_chat_completions_server.cli.chat_history import ChatHistoryManager, ChatSession
+from src.open_amazon_chat_completions_server.cli.chat_history import ChatHistoryManager, ChatSession
 
 @pytest.fixture
 def temp_storage_dir(tmp_path):

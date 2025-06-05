@@ -1,15 +1,15 @@
 import pytest
-from src.amazon_chat_completions_server.core.models import (
+from src.open_amazon_chat_completions_server.core.models import (
     ChatCompletionRequest,
     Message,
 )
-from src.amazon_chat_completions_server.adapters.bedrock.ai21_strategy import AI21Strategy
-from src.amazon_chat_completions_server.adapters.bedrock.cohere_strategy import CohereStrategy
-from src.amazon_chat_completions_server.adapters.bedrock.meta_strategy import MetaStrategy
-from src.amazon_chat_completions_server.adapters.bedrock.mistral_strategy import MistralStrategy
-from src.amazon_chat_completions_server.adapters.bedrock.stability_strategy import StabilityStrategy
-from src.amazon_chat_completions_server.adapters.bedrock.writer_strategy import WriterStrategy
-from src.amazon_chat_completions_server.adapters.bedrock.nova_strategy import NovaStrategy
+from src.open_amazon_chat_completions_server.adapters.bedrock.ai21_strategy import AI21Strategy
+from src.open_amazon_chat_completions_server.adapters.bedrock.cohere_strategy import CohereStrategy
+from src.open_amazon_chat_completions_server.adapters.bedrock.meta_strategy import MetaStrategy
+from src.open_amazon_chat_completions_server.adapters.bedrock.mistral_strategy import MistralStrategy
+from src.open_amazon_chat_completions_server.adapters.bedrock.stability_strategy import StabilityStrategy
+from src.open_amazon_chat_completions_server.adapters.bedrock.writer_strategy import WriterStrategy
+from src.open_amazon_chat_completions_server.adapters.bedrock.nova_strategy import NovaStrategy
 
 
 class TestBedrockStrategies:

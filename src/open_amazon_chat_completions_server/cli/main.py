@@ -369,7 +369,7 @@ def serve(host: str, port: int, reload: bool, env_file: str):
     # Uvicorn will automatically load a .env file if present in the working directory,
     # or we can specify it. This ensures it uses the one managed by `configure`.
     uvicorn.run(
-        "src.amazon_chat_completions_server.api.app:app",
+        "src.open_amazon_chat_completions_server.api.app:app",
         host=host,
         port=port,
         reload=reload,

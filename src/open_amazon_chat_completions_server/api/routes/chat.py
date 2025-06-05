@@ -11,12 +11,12 @@ import json
 import logging
 from pydantic import ValidationError
 
-from src.amazon_chat_completions_server.services.llm_service_factory import (
+from src.open_amazon_chat_completions_server.services.llm_service_factory import (
     LLMServiceFactory,
 )
 
 # Import custom exceptions from the service layer and core
-from src.amazon_chat_completions_server.core.exceptions import (
+from src.open_amazon_chat_completions_server.core.exceptions import (
     ConfigurationError,
     ModelNotFoundError,
     ServiceAuthenticationError,
@@ -25,7 +25,7 @@ from src.amazon_chat_completions_server.core.exceptions import (
     ServiceUnavailableError,
     LLMIntegrationError,
 )
-from src.amazon_chat_completions_server.core.models import (
+from src.open_amazon_chat_completions_server.core.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
 )

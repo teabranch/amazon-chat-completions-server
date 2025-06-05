@@ -26,7 +26,7 @@ This directory contains the Jekyll-based documentation for the Amazon Chat Compl
    bundle exec jekyll serve
    ```
    
-   The site will be available at `http://localhost:4000/amazon-chat-completions-server/`
+   The site will be available at `http://localhost:4000/open-amazon-chat-completions-server/`
 
 ### GitHub Pages Deployment
 
@@ -121,7 +121,7 @@ Key configuration files:
 
 ## 🌐 Live Site
 
-The documentation is available at: https://teabranch.github.io/amazon-chat-completions-server/
+The documentation is available at: https://teabranch.github.io/open-amazon-chat-completions-server/
 
 ## 📚 Resources
 

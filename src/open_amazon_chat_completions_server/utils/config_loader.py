@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 # Load .env file from the project root.
 # Adjust the path if your .env file is located elsewhere relative to this script.
-# Assuming this script is in src/amazon_chat_completions_server/utils, .env is two levels up.
+# Assuming this script is in src/open_amazon_chat_completions_server/utils, .env is two levels up.
 dotenv_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env")
 
 if os.path.exists(dotenv_path):

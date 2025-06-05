@@ -60,12 +60,12 @@ tests/
 # tests/unit/test_services/test_openai_service.py
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from src.amazon_chat_completions_server.services.openai_service import OpenAIService
-from src.amazon_chat_completions_server.core.models import Message, ChatCompletionResponse
+from src.open_amazon_chat_completions_server.services.openai_service import OpenAIService
+from src.open_amazon_chat_completions_server.core.models import Message, ChatCompletionResponse
 
 @pytest.fixture
 def openai_service():
-    with patch('src.amazon_chat_completions_server.services.openai_service.AsyncOpenAI') as mock_client:
+    with patch('src.open_amazon_chat_completions_server.services.openai_service.AsyncOpenAI') as mock_client:
         service = OpenAIService(api_key="test-key")
         service.client = mock_client.return_value
         return service
@@ -125,9 +125,9 @@ async def test_chat_completion_with_tools(openai_service):
 ```python
 # tests/unit/test_adapters/test_bedrock_adapter.py
 import pytest
-from src.amazon_chat_completions_server.adapters.bedrock_adapter import BedrockAdapter
-from src.amazon_chat_completions_server.strategies.claude_strategy import ClaudeStrategy
-from src.amazon_chat_completions_server.core.models import ChatCompletionRequest, Message
+from src.open_amazon_chat_completions_server.adapters.bedrock_adapter import BedrockAdapter
+from src.open_amazon_chat_completions_server.strategies.claude_strategy import ClaudeStrategy
+from src.open_amazon_chat_completions_server.core.models import ChatCompletionRequest, Message
 
 @pytest.fixture
 def bedrock_adapter():
@@ -165,8 +165,8 @@ def test_convert_to_bedrock_request(bedrock_adapter):
 ```python
 # tests/unit/test_strategies/test_claude_strategy.py
 import pytest
-from src.amazon_chat_completions_server.strategies.claude_strategy import ClaudeStrategy
-from src.amazon_chat_completions_server.core.models import ChatCompletionRequest, Message
+from src.open_amazon_chat_completions_server.strategies.claude_strategy import ClaudeStrategy
+from src.open_amazon_chat_completions_server.core.models import ChatCompletionRequest, Message
 
 @pytest.fixture
 def claude_strategy():
@@ -225,7 +225,7 @@ def test_convert_tool_calls(claude_strategy):
 # tests/unit/test_models/test_chat_models.py
 import pytest
 from pydantic import ValidationError
-from src.amazon_chat_completions_server.core.models import (
+from src.open_amazon_chat_completions_server.core.models import (
     ChatCompletionRequest, Message, Tool, Function
 )
 
@@ -288,7 +288,7 @@ def test_tool_definition():
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
-from src.amazon_chat_completions_server.main import app
+from src.open_amazon_chat_completions_server.main import app
 
 @pytest.fixture
 def client():
@@ -296,7 +296,7 @@ def client():
 
 @pytest.fixture
 def mock_openai_service():
-    with patch('src.amazon_chat_completions_server.services.llm_service_factory.LLMServiceFactory.get_service') as mock:
+    with patch('src.open_amazon_chat_completions_server.services.llm_service_factory.LLMServiceFactory.get_service') as mock:
         service = AsyncMock()
         mock.return_value = service
         yield service
@@ -394,7 +394,7 @@ def test_invalid_model(client):
 import pytest
 from click.testing import CliRunner
 from unittest.mock import patch, MagicMock
-from src.amazon_chat_completions_server.cli.main import cli
+from src.open_amazon_chat_completions_server.cli.main import cli
 
 @pytest.fixture
 def runner():
@@ -439,7 +439,7 @@ def test_models_command(runner):
         assert result.exit_code == 0
         assert "gpt-4o-mini" in result.output
 
-@patch('src.amazon_chat_completions_server.cli.chat.InteractiveChatSession')
+@patch('src.open_amazon_chat_completions_server.cli.chat.InteractiveChatSession')
 def test_chat_command(mock_chat_session, runner):
     """Test interactive chat command"""
     mock_session = MagicMock()
@@ -462,7 +462,7 @@ def test_chat_command(mock_chat_session, runner):
 import pytest
 import asyncio
 from fastapi.testclient import TestClient
-from src.amazon_chat_completions_server.main import app
+from src.open_amazon_chat_completions_server.main import app
 
 @pytest.fixture
 def client():

@@ -5,8 +5,8 @@ from async_asgi_testclient import TestClient
 from fastapi import status
 from unittest.mock import patch, Mock, AsyncMock
 
-from src.amazon_chat_completions_server.api.app import app
-from src.amazon_chat_completions_server.core.models import ChatCompletionRequest, Message, ChatCompletionResponse, ChatCompletionChoice, Usage
+from src.open_amazon_chat_completions_server.api.app import app
+from src.open_amazon_chat_completions_server.core.models import ChatCompletionRequest, Message, ChatCompletionResponse, ChatCompletionChoice, Usage
 
 # Remove old synchronous TestClient related imports if any are left specifically for it.
 # from fastapi.testclient import TestClient # Should not be needed anymore
@@ -179,7 +179,7 @@ async def test_chat_completion_openai_format(client: TestClient, test_api_key):
     ).model_dump()
     
     # Mock the LLM service
-    with patch('src.amazon_chat_completions_server.services.llm_service_factory.LLMServiceFactory.get_service_for_model') as mock_factory:
+    with patch('src.open_amazon_chat_completions_server.services.llm_service_factory.LLMServiceFactory.get_service_for_model') as mock_factory:
         mock_service = Mock()
         mock_service.provider_name = "test"
         

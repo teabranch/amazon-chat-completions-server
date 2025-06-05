@@ -1,8 +1,8 @@
 import pytest
 import os
 from unittest.mock import patch, MagicMock
-from src.amazon_chat_completions_server.services.bedrock_service import BedrockService
-from src.amazon_chat_completions_server.core.exceptions import ConfigurationError
+from src.open_amazon_chat_completions_server.services.bedrock_service import BedrockService
+from src.open_amazon_chat_completions_server.core.exceptions import ConfigurationError
 
 # Import authentication check functions from bedrock tests
 import sys
@@ -47,7 +47,7 @@ except ImportError:
 class TestAWSAuthenticationMocked:
     """Test AWS authentication methods with mocked AWS services."""
 
-    @patch('src.amazon_chat_completions_server.services.bedrock_service.boto3.Session')
+    @patch('src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session')
     def test_static_credentials_session_creation(self, mock_session):
         """Test session creation with static AWS credentials."""
         # Mock the session and STS client
@@ -75,7 +75,7 @@ class TestAWSAuthenticationMocked:
                 region_name='us-east-1'
             )
 
-    @patch('src.amazon_chat_completions_server.services.bedrock_service.boto3.Session')
+    @patch('src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session')
     def test_profile_session_creation(self, mock_session):
         """Test session creation with AWS profile."""
         # Mock the session and STS client
@@ -97,7 +97,7 @@ class TestAWSAuthenticationMocked:
                 region_name='us-east-1'
             )
 
-    @patch('src.amazon_chat_completions_server.services.bedrock_service.boto3.Session')
+    @patch('src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session')
     def test_role_assumption_session_creation_mocked(self, mock_session):
         """Test session creation with role assumption (mocked)."""
         # Mock the STS client and assume_role response
@@ -139,7 +139,7 @@ class TestAWSAuthenticationMocked:
             assert 'RoleSessionName' in call_args
             assert 'DurationSeconds' in call_args
 
-    @patch('src.amazon_chat_completions_server.services.bedrock_service.boto3.Session')
+    @patch('src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session')
     def test_web_identity_session_creation(self, mock_session):
         """Test session creation with web identity token."""
         # Mock the STS client
@@ -162,7 +162,7 @@ class TestAWSAuthenticationMocked:
             # Verify the session was created
             assert mock_session.called
 
-    @patch('src.amazon_chat_completions_server.services.bedrock_service.boto3.Session')
+    @patch('src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session')
     def test_authentication_priority_order(self, mock_session):
         """Test that authentication methods are used in the correct priority order."""
         # Mock the session and STS client
@@ -194,7 +194,7 @@ class TestAWSAuthenticationMocked:
                 region_name='us-east-1'
             )
 
-    @patch('src.amazon_chat_completions_server.services.bedrock_service.boto3.Session')
+    @patch('src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session')
     def test_session_duration_validation(self, mock_session):
         """Test that session duration is properly validated."""
         # Mock the STS client and assume_role response
@@ -472,7 +472,7 @@ class TestAWSAuthenticationConfiguration:
     @pytest.mark.skipif(not AWS_CONFIGURED, reason=f"AWS authentication not configured: {AWS_AUTH_STATUS_MESSAGE}")
     def test_configuration_validation(self):
         """Test that configuration validation works with new authentication methods."""
-        from src.amazon_chat_completions_server.utils.config_loader import AppConfig
+        from src.open_amazon_chat_completions_server.utils.config_loader import AppConfig
         
         # Since AppConfig always loads .env file, let's test that it properly handles
         # the current configuration and validates it correctly

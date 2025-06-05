@@ -32,8 +32,8 @@ Guide for developers who want to extend, customize, or contribute to the Amazon 
 
 ```bash
 # Fork and clone the repository
-git clone https://github.com/teabranch/amazon-chat-completions-server.git
-cd amazon-chat-completions-server
+git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
+cd open-amazon-chat-completions-server
 
 # Create virtual environment
 uv venv
@@ -65,9 +65,9 @@ DEBUG=true
 ## Project Structure
 
 ```
-amazon-chat-completions-server/
+open-amazon-chat-completions-server/
 ├── src/
-│   └── amazon_chat_completions_server/
+│   └── open_amazon_chat_completions_server/
 │       ├── api/                 # FastAPI routes and endpoints
 │       ├── core/                # Core models and utilities
 │       ├── services/            # Business logic and integrations
@@ -120,17 +120,17 @@ pre-commit run --all-files
 
 ```bash
 # Start development server with auto-reload
-amazon-chat serve --reload --log-level debug
+open-amazon-chat serve --reload --log-level debug
 
 # Or use uvicorn directly
-uvicorn src.amazon_chat_completions_server.main:app --reload --log-level debug
+uvicorn src.open_amazon_chat_completions_server.main:app --reload --log-level debug
 ```
 
 ### 4. Interactive Development
 
 ```bash
 # Start interactive chat for testing
-amazon-chat chat --model gpt-4o-mini --server-url http://localhost:8000
+open-amazon-chat chat --model gpt-4o-mini --server-url http://localhost:8000
 
 # Test API endpoints
 curl -X POST http://localhost:8000/v1/chat/completions \
@@ -146,7 +146,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 Create a new service class:
 
 ```python
-# src/amazon_chat_completions_server/services/new_provider_service.py
+# src/open_amazon_chat_completions_server/services/new_provider_service.py
 from typing import AsyncGenerator, List, Optional
 from ..core.models import ChatCompletionRequest, ChatCompletionResponse, Message
 from ..core.exceptions import LLMIntegrationError
@@ -189,7 +189,7 @@ class NewProviderService(BaseLLMService):
 Register the service in the factory:
 
 ```python
-# src/amazon_chat_completions_server/services/llm_service_factory.py
+# src/open_amazon_chat_completions_server/services/llm_service_factory.py
 from .new_provider_service import NewProviderService
 
 class LLMServiceFactory:
@@ -206,7 +206,7 @@ class LLMServiceFactory:
 Create a new router:
 
 ```python
-# src/amazon_chat_completions_server/api/new_endpoints.py
+# src/open_amazon_chat_completions_server/api/new_endpoints.py
 from fastapi import APIRouter, Depends, HTTPException
 from ..core.auth import verify_api_key
 from ..core.models import CustomRequest, CustomResponse
@@ -229,7 +229,7 @@ async def custom_endpoint(
 Register the router:
 
 ```python
-# src/amazon_chat_completions_server/main.py
+# src/open_amazon_chat_completions_server/main.py
 from .api.new_endpoints import router as new_router
 
 app.include_router(new_router)
@@ -240,7 +240,7 @@ app.include_router(new_router)
 Create a new command:
 
 ```python
-# src/amazon_chat_completions_server/cli/new_command.py
+# src/open_amazon_chat_completions_server/cli/new_command.py
 import click
 from ..services.llm_service_factory import LLMServiceFactory
 
@@ -255,7 +255,7 @@ def new_command(option: str):
 Register the command:
 
 ```python
-# src/amazon_chat_completions_server/cli/main.py
+# src/open_amazon_chat_completions_server/cli/main.py
 from .new_command import new_command
 
 cli.add_command(new_command)
@@ -284,8 +284,8 @@ tests/
 # tests/unit/test_services/test_openai_service.py
 import pytest
 from unittest.mock import AsyncMock, patch
-from src.amazon_chat_completions_server.services.openai_service import OpenAIService
-from src.amazon_chat_completions_server.core.models import Message
+from src.open_amazon_chat_completions_server.services.openai_service import OpenAIService
+from src.open_amazon_chat_completions_server.core.models import Message
 
 @pytest.fixture
 def openai_service():
@@ -315,7 +315,7 @@ async def test_chat_completion(openai_service):
 # tests/integration/test_api_integration.py
 import pytest
 from fastapi.testclient import TestClient
-from src.amazon_chat_completions_server.main import app
+from src.open_amazon_chat_completions_server.main import app
 
 @pytest.fixture
 def client():
@@ -344,7 +344,7 @@ def test_chat_completions_endpoint(client):
 # tests/unit/test_cli/test_chat_command.py
 import pytest
 from click.testing import CliRunner
-from src.amazon_chat_completions_server.cli.main import cli
+from src.open_amazon_chat_completions_server.cli.main import cli
 
 def test_chat_command():
     """Test the chat CLI command"""
@@ -467,7 +467,7 @@ logger.error("Error message")
 ### Debug Configuration
 
 ```python
-# src/amazon_chat_completions_server/core/config.py
+# src/open_amazon_chat_completions_server/core/config.py
 import os
 
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
@@ -587,10 +587,10 @@ uv publish
 
 ```bash
 # Build Docker image
-docker build -t amazon-chat-completions-server:latest .
+docker build -t open-amazon-chat-completions-server:latest .
 
 # Run locally
-docker run -p 8000:8000 amazon-chat-completions-server:latest
+docker run -p 8000:8000 open-amazon-chat-completions-server:latest
 
 # Deploy to production
 # (Use your preferred deployment method)

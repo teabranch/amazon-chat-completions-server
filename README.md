@@ -32,8 +32,8 @@ A unified, provider-agnostic chat completions API server that seamlessly integra
 
 ```bash
 # Clone the repository
-git clone https://github.com/teabranch/amazon-chat-completions-server.git
-cd amazon-chat-completions-server
+git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
+cd open-amazon-chat-completions-server
 
 # Install with uv (recommended)
 uv pip install -e .
@@ -208,15 +208,15 @@ The server automatically routes requests based on model ID patterns:
 
 ```bash
 # Option 1: Development installation
-git clone https://github.com/teabranch/amazon-chat-completions-server.git
-cd amazon-chat-completions-server
+git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
+cd open-amazon-chat-completions-server
 uv pip install -e .
 
 # Option 2: Direct from GitHub
-pip install git+https://github.com/teabranch/amazon-chat-completions-server.git
+pip install git+https://github.com/teabranch/open-amazon-chat-completions-server.git
 
 # Option 3: Local wheel
-pip install dist/amazon_chat_completions_server-*.whl
+pip install dist/open_amazon_chat_completions_server-*.whl
 ```
 
 ### Verify Installation
@@ -776,16 +776,10 @@ uv run pytest -m "external_api"
 uv run pytest --cov=src --cov-report=html
 
 # Run specific test categories
-<<<<<<< HEAD
 uv run pytest tests/cli/  # CLI tests
 uv run pytest tests/core/ # Core functionality tests
 uv run pytest tests/adapters/ # Adapter tests
 uv run pytest tests/utils/ # Utility tests
-=======
-uv run pytest tests/api/  # API tests
-uv run pytest tests/cli/  # CLI tests
-uv run pytest tests/core/ # Core functionality tests
->>>>>>> main
 ```
 
 ### External API Test Configuration
@@ -835,11 +829,7 @@ uv run pytest -m "aws_integration"
 
 ### Test Coverage
 
-<<<<<<< HEAD
 - ✅ **152 tests passing** with comprehensive coverage
-=======
-- ✅ **113+ tests passing** with comprehensive coverage
->>>>>>> main
 - ✅ **Format detection** and conversion
 - ✅ **Model-based routing** logic
 - ✅ **Streaming** functionality
@@ -854,13 +844,13 @@ uv run pytest -m "aws_integration"
 
 ```bash
 # Build image
-docker build -t amazon-chat-completions-server .
+docker build -t open-amazon-chat-completions-server .
 
 # Run container
 docker run -p 8000:8000 \
   -e API_KEY=your-api-key \
   -e OPENAI_API_KEY=sk-your-key \
-  amazon-chat-completions-server
+  open-amazon-chat-completions-server
 ```
 
 ### Production Considerations
@@ -873,18 +863,14 @@ docker run -p 8000:8000 \
 
 ## 🤝 Contributing
 
-<<<<<<< HEAD
 We welcome contributions! Please see our [Development Guide](docs/development.md) for details on how to extend, customize, or contribute to the project.
-=======
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
->>>>>>> main
 
 ### Development Setup
 
 ```bash
 # Clone and setup
-git clone https://github.com/teabranch/amazon-chat-completions-server.git
-cd amazon-chat-completions-server
+git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
+cd open-amazon-chat-completions-server
 
 # Install development dependencies
 uv pip install -e ".[dev]"
@@ -914,12 +900,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Documentation**: [docs/](docs/)
 - **API Reference**: [docs/api-reference.md](docs/api-reference.md)
 - **CLI Reference**: [docs/cli-reference.md](docs/cli-reference.md)
-<<<<<<< HEAD
-- **Architecture Guide**: [docs/guides/architecture.md](docs/guides/architecture.md)
-=======
 - **Architecture Guide**: [docs/architecture.md](docs/architecture.md)
->>>>>>> main
-- **Issues**: [GitHub Issues](https://github.com/teabranch/amazon-chat-completions-server/issues)
+- **Issues**: [GitHub Issues](https://github.com/teabranch/open-amazon-chat-completions-server/issues)
 
 ---
 

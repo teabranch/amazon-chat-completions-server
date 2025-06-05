@@ -13,7 +13,7 @@ A unified, provider-agnostic chat completions API server supporting OpenAI and A
 {: .fs-6 .fw-300 }
 
 [Get started now](getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[View on GitHub](https://github.com/teabranch/amazon-chat-completions-server){: .btn .fs-5 .mb-4 .mb-md-0 }
+[View on GitHub](https://github.com/teabranch/open-amazon-chat-completions-server){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
@@ -23,8 +23,8 @@ A unified, provider-agnostic chat completions API server supporting OpenAI and A
 
 ```bash
 # Clone and install
-git clone https://github.com/teabranch/amazon-chat-completions-server.git
-cd amazon-chat-completions-server
+git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
+cd open-amazon-chat-completions-server
 uv pip install -e .
 
 # Configure environment
@@ -129,8 +129,8 @@ All format combinations are supported through the unified endpoint:
 
 ## 🔗 Quick Links
 
-- **[GitHub Repository](https://github.com/teabranch/amazon-chat-completions-server)**
-- **[Issues & Support](https://github.com/teabranch/amazon-chat-completions-server/issues)**
+- **[GitHub Repository](https://github.com/teabranch/open-amazon-chat-completions-server)**
+- **[Issues & Support](https://github.com/teabranch/open-amazon-chat-completions-server/issues)**
 - **[OpenAI API Reference](https://platform.openai.com/docs/api-reference/chat)**
 - **[AWS Bedrock Documentation](https://docs.aws.amazon.com/bedrock/)**
 
@@ -138,4 +138,4 @@ All format combinations are supported through the unified endpoint:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/teabranch/amazon-chat-completions-server/blob/main/LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/teabranch/open-amazon-chat-completions-server/blob/main/LICENSE) file for details. 

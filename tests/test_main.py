@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from src.amazon_chat_completions_server.api.app import app # Adjusted import path
+from src.open_amazon_chat_completions_server.api.app import app # Adjusted import path
 
 client = TestClient(app)
 

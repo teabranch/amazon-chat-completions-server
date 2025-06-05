@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "amazon_chat_completions_server"
+name = "open_amazon_chat_completions_server"
 dynamic = ["version"]
 authors = [
   {name = "Danny Teller", email = "danny.teller.io@gmail.com"},
@@ -40,9 +40,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/teabranch/amazon-chat-completions-server"
-"Bug Tracker" = "https://github.com/teabranch/amazon-chat-completions-server/issues"
-"Documentation" = "https://github.com/teabranch/amazon-chat-completions-server#readme"
+"Homepage" = "https://github.com/teabranch/open-amazon-chat-completions-server"
+"Bug Tracker" = "https://github.com/teabranch/open-amazon-chat-completions-server/issues"
+"Documentation" = "https://github.com/teabranch/open-amazon-chat-completions-server#readme"
 
 [project.optional-dependencies]
 dev = [
@@ -54,10 +54,10 @@ dev = [
 ]
 
 [project.scripts]
-amazon-chat = "amazon_chat_completions_server.cli.main:cli"
+amazon-chat = "open_amazon_chat_completions_server.cli.main:cli"
 
 [tool.setuptools.dynamic]
-version = {attr = "amazon_chat_completions_server.version.__version__"}
+version = {attr = "open_amazon_chat_completions_server.version.__version__"}
 
 
 [tool.setuptools.packages.find]

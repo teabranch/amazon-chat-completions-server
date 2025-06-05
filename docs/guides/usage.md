@@ -60,9 +60,9 @@ LOG_LEVEL="INFO"
 
 ```python
 import asyncio
-from src.amazon_chat_completions_server.core.models import Message
-from src.amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
-from src.amazon_chat_completions_server.core.exceptions import LLMIntegrationError
+from src.open_amazon_chat_completions_server.core.models import Message
+from src.open_amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
+from src.open_amazon_chat_completions_server.core.exceptions import LLMIntegrationError
 
 # Get service instances
 openai_service = LLMServiceFactory.get_service(
@@ -265,7 +265,7 @@ asyncio.run(cross_provider_example())
 ### Comprehensive Error Handling
 
 ```python
-from src.amazon_chat_completions_server.core.exceptions import (
+from src.open_amazon_chat_completions_server.core.exceptions import (
     LLMIntegrationError,
     AuthenticationError,
     RateLimitError,

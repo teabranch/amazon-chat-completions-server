@@ -2,8 +2,8 @@ import pytest
 import os
 from async_asgi_testclient import TestClient
 
-from src.amazon_chat_completions_server.api.app import app
-from src.amazon_chat_completions_server.api.schemas.requests import ChatCompletionRequest, Message
+from src.open_amazon_chat_completions_server.api.app import app
+from src.open_amazon_chat_completions_server.api.schemas.requests import ChatCompletionRequest, Message
 
 # Check for various AWS authentication methods
 def check_aws_authentication():

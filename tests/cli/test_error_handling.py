@@ -1,7 +1,7 @@
 import pytest
 import requests
 from rich.console import Console
-from src.amazon_chat_completions_server.cli.error_handling import CLIErrorHandler, make_api_request
+from src.open_amazon_chat_completions_server.cli.error_handling import CLIErrorHandler, make_api_request
 from unittest.mock import patch
 
 @pytest.fixture

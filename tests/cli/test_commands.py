@@ -1,6 +1,6 @@
 import pytest
 from click.testing import CliRunner
-from src.amazon_chat_completions_server.cli.main import cli
+from src.open_amazon_chat_completions_server.cli.main import cli
 import os
 import tempfile
 import json
@@ -54,7 +54,7 @@ def mock_history_dir(tmp_path):
         del os.environ["CHAT_HISTORY_DIR"]
 
 def test_config_show(runner, mock_env_file):
-    with patch('src.amazon_chat_completions_server.cli.main.DOTENV_PATH', mock_env_file):
+    with patch('src.open_amazon_chat_completions_server.cli.main.DOTENV_PATH', mock_env_file):
         result = runner.invoke(cli, ['config', 'show'])
         assert result.exit_code == 0
         assert 'API_KEY' in result.output
@@ -66,7 +66,7 @@ def test_config_set(runner):
         env_file = f.name
     
     try:
-        with patch('src.amazon_chat_completions_server.cli.main.DOTENV_PATH', env_file):
+        with patch('src.open_amazon_chat_completions_server.cli.main.DOTENV_PATH', env_file):
             # Test setting individual values
             result = runner.invoke(cli, ['config', 'set', 'API_KEY', 'test-key'])
             assert result.exit_code == 0
@@ -78,10 +78,10 @@ def test_config_set(runner):
     finally:
         os.unlink(env_file)
 
-@patch('src.amazon_chat_completions_server.cli.main.make_api_request')
-@patch('src.amazon_chat_completions_server.cli.main.ChatHistoryManager')
+@patch('src.open_amazon_chat_completions_server.cli.main.make_api_request')
+@patch('src.open_amazon_chat_completions_server.cli.main.ChatHistoryManager')
 def test_chat_command_non_streaming(mock_manager_class, mock_make_request, runner, mock_env_file):
-    with patch('src.amazon_chat_completions_server.cli.main.DOTENV_PATH', mock_env_file):
+    with patch('src.open_amazon_chat_completions_server.cli.main.DOTENV_PATH', mock_env_file):
         # Mock the ChatHistoryManager
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
@@ -138,10 +138,10 @@ def test_chat_command_streaming(runner):
     """Test streaming chat command - currently skipped due to mocking complexity"""
     pass
 
-@patch('src.amazon_chat_completions_server.cli.main.make_api_request')
-@patch('src.amazon_chat_completions_server.cli.main.ChatHistoryManager')
+@patch('src.open_amazon_chat_completions_server.cli.main.make_api_request')
+@patch('src.open_amazon_chat_completions_server.cli.main.ChatHistoryManager')
 def test_chat_command_tool_calls(mock_manager_class, mock_make_request, runner, mock_env_file):
-    with patch('src.amazon_chat_completions_server.cli.main.DOTENV_PATH', mock_env_file):
+    with patch('src.open_amazon_chat_completions_server.cli.main.DOTENV_PATH', mock_env_file):
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
         mock_session = MagicMock()
@@ -253,14 +253,14 @@ def test_serve_command(mock_run, runner):
     
     # Verify uvicorn.run was called with correct arguments
     mock_run.assert_called_once_with(
-        "src.amazon_chat_completions_server.api.app:app",
+        "src.open_amazon_chat_completions_server.api.app:app",
         host="localhost",
         port=8000,
         reload=False,
         env_file=None
     )
 
-@patch('src.amazon_chat_completions_server.cli.main.ChatHistoryManager')
+@patch('src.open_amazon_chat_completions_server.cli.main.ChatHistoryManager')
 def test_history_list_command(mock_manager_class, runner, mock_history_dir):
     """Test listing chat history when no sessions exist."""
     # Mock the ChatHistoryManager
@@ -281,7 +281,7 @@ def test_history_list_command(mock_manager_class, runner, mock_history_dir):
     # A more specific check for the empty table could be added if needed,
     # e.g., checking the exact number of lines or specific border characters.
 
-@patch('src.amazon_chat_completions_server.cli.main.ChatHistoryManager')
+@patch('src.open_amazon_chat_completions_server.cli.main.ChatHistoryManager')
 def test_history_list_command_with_sessions(mock_manager_class, runner, mock_history_dir):
     """Test listing chat history when sessions exist."""
     # Mock the ChatHistoryManager

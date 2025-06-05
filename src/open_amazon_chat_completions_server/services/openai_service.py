@@ -2,7 +2,7 @@ import os
 from typing import List, AsyncGenerator, Optional, Union
 from openai import AsyncOpenAI, APIError, AuthenticationError, NotFoundError
 
-from src.amazon_chat_completions_server.core.models import (
+from src.open_amazon_chat_completions_server.core.models import (
     Message,
     ChatCompletionResponse,
     ChatCompletionChunk,
@@ -18,7 +18,7 @@ from src.amazon_chat_completions_server.core.models import (
 from .llm_service_abc import AbstractLLMService
 
 # Import custom exceptions (assuming they would be defined in core.exceptions)
-from src.amazon_chat_completions_server.core.exceptions import (
+from src.open_amazon_chat_completions_server.core.exceptions import (
     ServiceAuthenticationError,
     ServiceApiError,
     ServiceUnavailableError,

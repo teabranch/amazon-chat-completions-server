@@ -10,7 +10,7 @@ from botocore.exceptions import (
 )
 import asyncio
 
-from src.amazon_chat_completions_server.core.models import (
+from src.open_amazon_chat_completions_server.core.models import (
     Message,
     ChatCompletionResponse,
     ChatCompletionChunk,
@@ -23,7 +23,7 @@ from src.amazon_chat_completions_server.core.models import (
 from .llm_service_abc import AbstractLLMService
 
 # Import custom exceptions
-from src.amazon_chat_completions_server.core.exceptions import (
+from src.open_amazon_chat_completions_server.core.exceptions import (
     ConfigurationError,
     ServiceAuthenticationError,
     ServiceModelNotFoundError,

@@ -1,12 +1,12 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from src.amazon_chat_completions_server.adapters.openai_adapter import OpenAIAdapter
-from src.amazon_chat_completions_server.core.models import (
+from src.open_amazon_chat_completions_server.adapters.openai_adapter import OpenAIAdapter
+from src.open_amazon_chat_completions_server.core.models import (
     Message,
     ChatCompletionRequest,
     ChatCompletionResponse
 )
-from src.amazon_chat_completions_server.core.exceptions import (
+from src.open_amazon_chat_completions_server.core.exceptions import (
     APIConnectionError,
     APIRequestError,
     RateLimitError
@@ -48,7 +48,7 @@ async def test_chat_completion(openai_adapter, sample_request):
         }
     }
 
-    with patch('src.amazon_chat_completions_server.utils.api_client.APIClient.make_openai_chat_completion_request', 
+    with patch('src.open_amazon_chat_completions_server.utils.api_client.APIClient.make_openai_chat_completion_request', 
                new_callable=AsyncMock) as mock_api:
         mock_api.return_value = mock_response
         response = await openai_adapter.chat_completion(sample_request)
@@ -92,7 +92,7 @@ async def test_stream_chat_completion(openai_adapter, sample_request):
         for chunk in mock_chunks:
             yield chunk
 
-    with patch('src.amazon_chat_completions_server.utils.api_client.APIClient.make_openai_chat_completion_request', 
+    with patch('src.open_amazon_chat_completions_server.utils.api_client.APIClient.make_openai_chat_completion_request', 
                new_callable=AsyncMock) as mock_api:
         mock_api.return_value = mock_stream()
         
@@ -106,7 +106,7 @@ async def test_stream_chat_completion(openai_adapter, sample_request):
 
 @pytest.mark.asyncio
 async def test_error_handling(openai_adapter, sample_request):
-    with patch('src.amazon_chat_completions_server.utils.api_client.APIClient.make_openai_chat_completion_request', 
+    with patch('src.open_amazon_chat_completions_server.utils.api_client.APIClient.make_openai_chat_completion_request', 
                new_callable=AsyncMock) as mock_api:
         # Test rate limit error
         mock_api.side_effect = RateLimitError("Rate limit exceeded")

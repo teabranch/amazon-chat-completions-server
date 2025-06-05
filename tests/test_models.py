@@ -3,7 +3,7 @@ import os
 from httpx import AsyncClient, ASGITransport
 from fastapi import status
 
-from src.amazon_chat_completions_server.api.app import app # Main FastAPI app
+from src.open_amazon_chat_completions_server.api.app import app # Main FastAPI app
 
 # Use the test API key from conftest.py
 OPENAI_API_KEY_IS_SET = bool(os.getenv("OPENAI_API_KEY"))

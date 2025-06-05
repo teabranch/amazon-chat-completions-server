@@ -57,7 +57,7 @@ jobs:
 
     environment:
       name: 'pypi'
-      url: https://pypi.org/project/amazon-chat-completions-server
+      url: https://pypi.org/project/open-amazon-chat-completions-server
 
     steps:
       - name: Retrieve release distributions

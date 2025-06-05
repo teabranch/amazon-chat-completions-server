@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import patch
 
-from src.amazon_chat_completions_server.adapters.bedrock_to_openai_adapter import BedrockToOpenAIAdapter
-from src.amazon_chat_completions_server.core.bedrock_models import (
+from src.open_amazon_chat_completions_server.adapters.bedrock_to_openai_adapter import BedrockToOpenAIAdapter
+from src.open_amazon_chat_completions_server.core.bedrock_models import (
     BedrockClaudeRequest,
     BedrockTitanRequest,
     BedrockMessage,
@@ -13,7 +13,7 @@ from src.amazon_chat_completions_server.core.bedrock_models import (
     BedrockClaudeResponse,
     BedrockTitanResponse
 )
-from src.amazon_chat_completions_server.core.models import (
+from src.open_amazon_chat_completions_server.core.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatCompletionChoice,

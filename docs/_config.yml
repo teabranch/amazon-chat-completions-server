@@ -2,8 +2,8 @@
 title: Amazon Chat Completions Server
 description: A unified, provider-agnostic chat completions API server supporting OpenAI and AWS Bedrock
 url: "https://teabranch.github.io"
-baseurl: "/amazon-chat-completions-server"
-repository: teabranch/amazon-chat-completions-server
+baseurl: "/open-amazon-chat-completions-server"
+repository: teabranch/open-amazon-chat-completions-server
 # Theme
 theme: minima
 remote_theme: pages-themes/minimal@v0.2.0
@@ -62,6 +62,6 @@ exclude:
 
 # GitHub Pages settings
 github:
-  repository_name: amazon-chat-completions-server
-  repository_url: https://github.com/teabranch/amazon-chat-completions-server 
+  repository_name: open-amazon-chat-completions-server
+  repository_url: https://github.com/teabranch/open-amazon-chat-completions-server 
 

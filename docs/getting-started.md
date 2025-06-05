@@ -51,8 +51,8 @@ pip install uv
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/teabranch/amazon-chat-completions-server.git
-cd amazon-chat-completions-server
+git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
+cd open-amazon-chat-completions-server
 ```
 
 ### 2. Install the Package
@@ -315,7 +315,7 @@ Now that you have the server running:
 - Check the [API Reference](api-reference) for detailed endpoint documentation
 - Review the [CLI Reference](cli-reference) for command-line usage
 - Look at the [Usage Guide](guides/usage) for programming examples
-- Open an issue on [GitHub](https://github.com/teabranch/amazon-chat-completions-server/issues) if you need help
+- Open an issue on [GitHub](https://github.com/teabranch/open-amazon-chat-completions-server/issues) if you need help
 
 ---
 

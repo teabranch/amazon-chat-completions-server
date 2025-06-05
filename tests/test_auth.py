@@ -2,8 +2,8 @@ import pytest
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.testclient import TestClient
 
-from src.amazon_chat_completions_server.api.middleware.auth import verify_api_key
-from src.amazon_chat_completions_server.api.errors import http_exception_handler
+from src.open_amazon_chat_completions_server.api.middleware.auth import verify_api_key
+from src.open_amazon_chat_completions_server.api.errors import http_exception_handler
 
 # Create a dummy app to test the dependency
 app = FastAPI()

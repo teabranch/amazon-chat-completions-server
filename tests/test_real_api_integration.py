@@ -9,10 +9,10 @@ import pytest
 import asyncio
 import logging
 
-from src.amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
-from src.amazon_chat_completions_server.core.models import Message
-from src.amazon_chat_completions_server.core.exceptions import LLMIntegrationError
-from src.amazon_chat_completions_server.utils import config_loader
+from src.open_amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
+from src.open_amazon_chat_completions_server.core.models import Message
+from src.open_amazon_chat_completions_server.core.exceptions import LLMIntegrationError
+from src.open_amazon_chat_completions_server.utils import config_loader
 
 # Setup logging for tests
 logging.basicConfig(level=logging.INFO)
