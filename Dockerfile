@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install uv - use the installer for better ARM support
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.local/bin:$PATH"
 
 # Set the working directory in the container
 WORKDIR /app
@@ -43,15 +43,15 @@ COPY uv.lock ./
 
 # Pre-install dependencies to improve caching
 # Using uv sync for better dependency resolution and ARM wheel handling
-RUN uv venv --system-site-packages && \
-    uv pip install --system --no-deps setuptools wheel && \
-    uv sync --system --no-dev --no-install-project
+RUN /root/.local/bin/uv venv --system-site-packages && \
+    /root/.local/bin/uv pip install --system --no-deps setuptools wheel && \
+    /root/.local/bin/uv sync --system --no-dev --no-install-project
 
 # Copy the source code
 COPY src ./src
 
 # Install the project itself
-RUN uv pip install --system --no-deps .
+RUN /root/.local/bin/uv pip install --system --no-deps .
 
 # Copy other necessary files that might be needed by the application or for reference
 # .env.example is useful for understanding required environment variables
@@ -100,7 +100,7 @@ COPY --from=builder /app/src ./src
 USER appuser
 
 # Add the current directory to Python path so src module can be found
-ENV PYTHONPATH="/app:${PYTHONPATH}"
+ENV PYTHONPATH="/app"
 
 # Define an argument for the port, with a default value
 ARG PORT=8000
