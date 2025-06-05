@@ -1,23 +1,29 @@
 ---
+description: Complete API reference for Amazon Chat Completions Server
 layout: default
-title: API Reference
 nav_order: 3
-description: "Complete API reference for Amazon Chat Completions Server"
+title: API Reference
 ---
 
 # API Reference
+
 {: .no_toc }
 
 Complete reference for all API endpoints in the Amazon Chat Completions Server.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
+
 {: .no_toc .text-delta }
 
 1. TOC
-{:toc}
+   {:toc}
 
 ---
+
+```bash
+
+```
 
 ## Authentication
 
@@ -28,6 +34,7 @@ curl -H "Authorization: Bearer your-api-key" http://localhost:8000/endpoint
 ```
 
 **Authentication Errors:**
+
 - `401 Unauthorized` - Missing or invalid API key
 - `403 Forbidden` - API key lacks required permissions
 
@@ -44,11 +51,13 @@ This is the **main unified endpoint** for all chat completion requests. It autom
 - **Maintains full compatibility** with OpenAI Chat Completions API
 
 **Query Parameters:**
+
 - `target_format` (optional): `openai`, `bedrock_claude`, or `bedrock_titan`
 
 **Request Body Examples:**
 
 **OpenAI Format:**
+
 ```json
 {
   "model": "gpt-4o-mini",
@@ -65,6 +74,7 @@ This is the **main unified endpoint** for all chat completion requests. It autom
 ```
 
 **Bedrock Claude Format:**
+
 ```json
 {
   "anthropic_version": "bedrock-2023-05-31",
@@ -79,6 +89,7 @@ This is the **main unified endpoint** for all chat completion requests. It autom
 ```
 
 **Bedrock Titan Format:**
+
 ```json
 {
   "model": "amazon.titan-text-express-v1",
@@ -92,6 +103,7 @@ This is the **main unified endpoint** for all chat completion requests. It autom
 ```
 
 **Response (OpenAI Format - Default):**
+
 ```json
 {
   "id": "chatcmpl-123",
@@ -120,6 +132,7 @@ This is the **main unified endpoint** for all chat completion requests. It autom
 When `stream: true`, returns Server-Sent Events in the appropriate format based on the model and target format.
 
 **Format Conversion Example:**
+
 ```bash
 # OpenAI input → Bedrock Claude output
 curl -X POST "http://localhost:8000/v1/chat/completions?target_format=bedrock_claude" \
@@ -132,6 +145,7 @@ curl -X POST "http://localhost:8000/v1/chat/completions?target_format=bedrock_cl
 ```
 
 **Response (Bedrock Claude Format):**
+
 ```json
 {
   "id": "msg_123",
@@ -156,6 +170,7 @@ curl -X POST "http://localhost:8000/v1/chat/completions?target_format=bedrock_cl
 Health check for the unified endpoint.
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -172,6 +187,7 @@ Health check for the unified endpoint.
 List available models from all configured providers.
 
 **Response:**
+
 ```json
 {
   "object": "list",
@@ -203,6 +219,7 @@ List available models from all configured providers.
 General health check endpoint.
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -220,6 +237,7 @@ General health check endpoint.
 All endpoints return consistent error responses:
 
 ### 400 Bad Request
+
 ```json
 {
   "error": {
@@ -231,6 +249,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 401 Unauthorized
+
 ```json
 {
   "error": {
@@ -241,6 +260,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 404 Not Found
+
 ```json
 {
   "error": {
@@ -252,6 +272,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 422 Unprocessable Entity
+
 ```json
 {
   "error": {
@@ -263,6 +284,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 429 Too Many Requests
+
 ```json
 {
   "error": {
@@ -274,6 +296,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 500 Internal Server Error
+
 ```json
 {
   "error": {
@@ -285,6 +308,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 503 Service Unavailable
+
 ```json
 {
   "error": {
@@ -300,6 +324,7 @@ All endpoints return consistent error responses:
 ### Multimodal Content
 
 **Request with image (Bedrock Claude format):**
+
 ```json
 {
   "anthropic_version": "bedrock-2023-05-31",
@@ -327,6 +352,7 @@ All endpoints return consistent error responses:
 ### Tool Calls
 
 **Request with tools (Bedrock Claude format):**
+
 ```json
 {
   "anthropic_version": "bedrock-2023-05-31",
@@ -353,6 +379,7 @@ All endpoints return consistent error responses:
 ```
 
 **Response with tool call (Bedrock Claude format):**
+
 ```json
 {
   "id": "msg_123",
@@ -379,6 +406,7 @@ All endpoints return consistent error responses:
 ### Multi-turn Conversation
 
 **Request:**
+
 ```json
 {
   "model": "gpt-4o-mini",
@@ -392,6 +420,7 @@ All endpoints return consistent error responses:
 ```
 
 **Response:**
+
 ```json
 {
   "id": "chatcmpl-124",
@@ -419,6 +448,7 @@ All endpoints return consistent error responses:
 ### Streaming Example
 
 **Request:**
+
 ```json
 {
   "model": "gpt-4o-mini",
@@ -430,7 +460,8 @@ All endpoints return consistent error responses:
 ```
 
 **Streaming Response:**
-```
+
+```html
 data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
 
 data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"Once"},"finish_reason":null}]}
@@ -449,11 +480,13 @@ data: [DONE]
 The unified endpoint automatically routes requests based on model ID patterns:
 
 ### OpenAI Models
+
 - `gpt-*` (e.g., `gpt-4o-mini`, `gpt-3.5-turbo`)
 - `text-*` (e.g., `text-davinci-003`)
 - `dall-e-*` (e.g., `dall-e-3`)
 
 ### Bedrock Models
+
 - `anthropic.*` (e.g., `anthropic.claude-3-haiku-20240307-v1:0`)
 - `amazon.*` (e.g., `amazon.titan-text-express-v1`)
 - `ai21.*`, `cohere.*`, `meta.*`
@@ -464,9 +497,9 @@ The unified endpoint automatically routes requests based on model ID patterns:
 - **Default**: 100 requests per minute per API key
 - **Burst**: Up to 10 concurrent requests
 - **Headers**: Rate limit information in response headers:
-  - `X-RateLimit-Limit`: Requests per minute
-  - `X-RateLimit-Remaining`: Remaining requests
-  - `X-RateLimit-Reset`: Reset time (Unix timestamp)
+   - `X-RateLimit-Limit`: Requests per minute
+   - `X-RateLimit-Remaining`: Remaining requests
+   - `X-RateLimit-Reset`: Reset time (Unix timestamp)
 
 ## Content Types
 
@@ -480,4 +513,4 @@ Cross-Origin Resource Sharing (CORS) is enabled for all origins in development. 
 
 ---
 
-This API reference provides complete documentation for the unified endpoint. For interactive testing, visit `/docs` when the server is running. 
+This API reference provides complete documentation for the unified endpoint. For interactive testing, visit `/docs` when the server is running.

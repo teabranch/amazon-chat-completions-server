@@ -30,9 +30,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv - use the installer for better ARM support
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
+# Install uv using pip for more reliable installation
+RUN pip install uv
 
 # Set the working directory in the container
 WORKDIR /app
@@ -43,15 +42,15 @@ COPY uv.lock ./
 
 # Pre-install dependencies to improve caching
 # Using uv sync for better dependency resolution and ARM wheel handling
-RUN /root/.local/bin/uv venv --system-site-packages && \
-    /root/.local/bin/uv pip install --system --no-deps setuptools wheel && \
-    /root/.local/bin/uv sync --system --no-dev --no-install-project
+RUN uv venv --python 3.12 && \
+    uv pip install setuptools wheel && \
+    uv sync --no-dev --no-install-project
 
 # Copy the source code
 COPY src ./src
 
 # Install the project itself
-RUN /root/.local/bin/uv pip install --system --no-deps .
+RUN uv pip install --no-deps .
 
 # Copy other necessary files that might be needed by the application or for reference
 # .env.example is useful for understanding required environment variables
@@ -84,11 +83,11 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
-# Copy installed Python packages from the builder stage
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+# Copy installed Python packages from the builder stage (from uv virtual environment)
+COPY --from=builder /app/.venv/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
-# Copy the executable scripts from the builder stage
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy the executable scripts from the builder stage (from uv virtual environment)
+COPY --from=builder /app/.venv/bin /usr/local/bin
 
 # Copy the application source code from the builder stage
 COPY --from=builder /app/src ./src
