@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv using pip for more reliable installation
-RUN pip install uv
+RUN pip install uv==0.6.6
 
 # Set the working directory in the container
 WORKDIR /app
