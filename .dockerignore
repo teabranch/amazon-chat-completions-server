@@ -1,0 +1,42 @@
+# Docker
+Dockerfile
+.dockerignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+*.env
+.venv/
+venv/
+env/
+ENV/
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.project
+*.swp
+
+# Test files
+pytest_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Git
+.git/
+.gitignore
+
+# OS specific
+.DS_Store
+Thumbs.db 

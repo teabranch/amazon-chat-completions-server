@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amazon_chat_completions_server"
+dynamic = ["version"]
+authors = [
+  {name = "Danny Teller", email = "danny.teller.io@gmail.com"},
+]
+description = "A server and CLI for interacting between OpenAI and Amazon Bedrock."
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+maintainers = [
+  {name = "Danny Teller", email = "danny.teller.io@gmail.com"},
+]
+keywords = ["llm", "chatbot", "openai", "aws", "bedrock", "chat", "api", "cli", "fastapi"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Chat",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities"
+]
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.20.0",
+    "click>=8.0.0",
+    "requests>=2.25.0",
+    "rich>=13.0.0",
+    "python-dotenv>=0.20.0",
+    "openai>=1.0.0",
+    "boto3>=1.28.0",
+    "tenacity>=8.2.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/teabranch/amazon-chat-completions-server"
+"Bug Tracker" = "https://github.com/teabranch/amazon-chat-completions-server/issues"
+"Documentation" = "https://github.com/teabranch/amazon-chat-completions-server#readme"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.23",
+    "ruff>=0.4.0",
+    "mypy>=1.0.0"
+]
+
+[project.scripts]
+amazon-chat = "amazon_chat_completions_server.cli.main:cli"
+
+[tool.setuptools.dynamic]
+version = {attr = "amazon_chat_completions_server.version.__version__"}
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "module"
+filterwarnings = [
+    "ignore:datetime.datetime.utcnow\\(\\) is deprecated:DeprecationWarning:botocore.auth"
+]
+markers = [
+    "unit: marks tests as fast unit tests with no external dependencies",
+    "integration: marks tests as integration tests that may use mocked external services",
+    "real_api: marks tests that make real API calls and cost money",
+    "openai_integration: marks tests that make real OpenAI API calls",
+    "bedrock_integration: marks tests that make real AWS Bedrock API calls",
+    "aws_integration: marks tests that make real AWS/Bedrock API calls",
+    "external_api: marks tests that make external API calls and should be skipped in CI",
+    "slow: marks tests as slow running"
+]
+
+[dependency-groups]
+dev = [
+    "aiohttp>=3.12.2",
+    "async-asgi-testclient>=1.4.11",
+]

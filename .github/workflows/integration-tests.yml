@@ -1,0 +1,98 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      run_openai_tests:
+        description: 'Run OpenAI integration tests'
+        required: false
+        default: false
+        type: boolean
+      run_aws_tests:
+        description: 'Run AWS/Bedrock integration tests'
+        required: false
+        default: false
+        type: boolean
+  # Uncomment the following to run on schedule (e.g., nightly)
+  # schedule:
+  #   - cron: '0 2 * * *'  # Run at 2 AM UTC daily
+
+jobs:
+  openai-integration:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.run_openai_tests == 'true' || github.event_name == 'schedule'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    - name: Install uv and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install uv
+        uv sync --extra dev
+    - name: Run OpenAI integration tests
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: uv run pytest -m "openai_integration" -v
+      continue-on-error: true  # Don't fail the workflow if integration tests fail
+
+  aws-integration:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.run_aws_tests == 'true' || github.event_name == 'schedule'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    - name: Install uv and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install uv
+        uv sync --extra dev
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      continue-on-error: true
+    - name: Run AWS/Bedrock integration tests
+      env:
+        AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+        AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        AWS_EXTERNAL_ID: ${{ secrets.AWS_EXTERNAL_ID }}
+      run: uv run pytest -m "aws_integration" -v
+      continue-on-error: true  # Don't fail the workflow if integration tests fail
+
+  all-integration:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_openai_tests == 'true' && github.event.inputs.run_aws_tests == 'true'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    - name: Install uv and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install uv
+        uv sync --extra dev
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      continue-on-error: true
+    - name: Run all integration tests
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+        AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        AWS_EXTERNAL_ID: ${{ secrets.AWS_EXTERNAL_ID }}
+      run: uv run pytest -m "external_api" -v
+      continue-on-error: true  # Don't fail the workflow if integration tests fail 

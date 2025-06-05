@@ -1,0 +1,67 @@
+# Jekyll configuration for GitHub Pages
+title: Amazon Chat Completions Server
+description: A unified, provider-agnostic chat completions API server supporting OpenAI and AWS Bedrock
+url: "https://teabranch.github.io"
+baseurl: "/amazon-chat-completions-server"
+repository: teabranch/amazon-chat-completions-server
+# Theme
+theme: minima
+remote_theme: pages-themes/minimal@v0.2.0
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Markdown settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+
+# Collections
+collections:
+  guides:
+    output: true
+    permalink: /:collection/:name/
+
+# Navigation
+header_pages:
+  - index.md
+  - getting-started.md
+  - api-reference.md
+  - guides/index.md
+  - cli-reference.md
+  - development.md
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "guides"
+    values:
+      layout: "default"
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# GitHub Pages settings
+github:
+  repository_name: amazon-chat-completions-server
+  repository_url: https://github.com/teabranch/amazon-chat-completions-server 
+
