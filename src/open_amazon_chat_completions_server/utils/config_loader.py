@@ -71,6 +71,9 @@ class AppConfig:
         self.AWS_WEB_IDENTITY_TOKEN_FILE: Optional[str] = os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE")  # For OIDC/web identity
         self.AWS_ROLE_SESSION_DURATION: int = int(os.getenv("AWS_ROLE_SESSION_DURATION", "3600"))  # Session duration in seconds
 
+        # S3 Configuration for File Storage
+        self.S3_FILES_BUCKET: Optional[str] = os.getenv("S3_FILES_BUCKET")  # S3 bucket for file uploads
+
         # Application Configuration
         self.LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -187,6 +190,12 @@ class AppConfig:
         if (aws_static_keys_present or aws_profile_present or aws_role_arn_present or aws_web_identity_present) and not self.AWS_REGION:
             logger.warning(
                 "AWS credentials/profile/role are set, but AWS_REGION is not. Bedrock calls may fail or use default region."
+            )
+
+        # S3 file storage validation
+        if not self.S3_FILES_BUCKET:
+            logger.warning(
+                "S3_FILES_BUCKET is not set. File upload functionality will be unavailable."
             )
 
         # If neither OpenAI nor AWS is configured for any use:

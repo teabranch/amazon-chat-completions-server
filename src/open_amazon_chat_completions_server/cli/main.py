@@ -70,6 +70,12 @@ CONFIGURABLE_KEYS = [
         "sensitive": False,
     },
     {"name": "AWS_REGION", "prompt": "AWS Region Name for Bedrock (e.g., us-east-1)"},
+    # S3 Configuration for File Storage
+    {
+        "name": "S3_FILES_BUCKET",
+        "prompt": "S3 bucket name for file uploads (leave blank to disable file upload functionality)",
+        "sensitive": False,
+    },
     # Enhanced AWS Role Support
     {
         "name": "AWS_ROLE_ARN",
