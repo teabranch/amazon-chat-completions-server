@@ -34,6 +34,7 @@ dependencies = [
     "requests>=2.25.0",
     "rich>=13.0.0",
     "python-dotenv>=0.20.0",
+    "python-multipart>=0.0.6",
     "openai>=1.0.0",
     "boto3>=1.28.0",
     "tenacity>=8.2.0"
@@ -85,4 +86,7 @@ markers = [
 dev = [
     "aiohttp>=3.12.2",
     "async-asgi-testclient>=1.4.11",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.1.1",
 ]

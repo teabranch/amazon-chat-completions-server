@@ -163,6 +163,226 @@ curl -X POST "http://localhost:8000/v1/chat/completions?target_format=bedrock_cl
 }
 ```
 
+## File Operations
+
+The server provides a complete file management system compatible with OpenAI's Files API. Upload files, process their content, and use them as context in chat completions.
+
+### POST /v1/files
+
+Upload a file for use with chat completions.
+
+**Content-Type:** `multipart/form-data`
+
+**Form Parameters:**
+- `file` (required): The file to upload
+- `purpose` (required): The intended purpose (e.g., "assistants", "fine-tune", "batch")
+
+**Supported File Types:**
+- `text/plain` - Text files
+- `text/csv` - CSV data files
+- `application/json` - JSON configuration/data
+- `text/html` - HTML documents
+- `application/xml` - XML documents
+- `text/markdown` - Markdown files
+
+**Example:**
+
+```bash
+curl -X POST "http://localhost:8000/v1/files" \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@data.csv" \
+  -F "purpose=assistants"
+```
+
+**Response:**
+
+```json
+{
+  "id": "file-abc123def456",
+  "object": "file",
+  "bytes": 1024,
+  "created_at": 1677610602,
+  "filename": "data.csv",
+  "purpose": "assistants",
+  "status": "uploaded"
+}
+```
+
+### GET /v1/files
+
+List uploaded files with optional filtering.
+
+**Query Parameters:**
+- `purpose` (optional): Filter by purpose (e.g., "assistants")
+- `limit` (optional): Number of files to return (1-100, default: 20)
+
+**Example:**
+
+```bash
+curl "http://localhost:8000/v1/files?purpose=assistants&limit=10" \
+  -H "Authorization: Bearer your-api-key"
+```
+
+**Response:**
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "file-abc123def456",
+      "object": "file",
+      "bytes": 1024,
+      "created_at": 1677610602,
+      "filename": "data.csv",
+      "purpose": "assistants",
+      "status": "processed"
+    }
+  ]
+}
+```
+
+### GET /v1/files/{file_id}
+
+Retrieve metadata for a specific file.
+
+**Path Parameters:**
+- `file_id` (required): The file ID (format: "file-XXXXXXXX")
+
+**Example:**
+
+```bash
+curl "http://localhost:8000/v1/files/file-abc123def456" \
+  -H "Authorization: Bearer your-api-key"
+```
+
+**Response:**
+
+```json
+{
+  "id": "file-abc123def456",
+  "object": "file",
+  "bytes": 1024,
+  "created_at": 1677610602,
+  "filename": "data.csv",
+  "purpose": "assistants",
+  "status": "processed"
+}
+```
+
+### GET /v1/files/{file_id}/content
+
+Download the original file content.
+
+**Path Parameters:**
+- `file_id` (required): The file ID
+
+**Example:**
+
+```bash
+curl "http://localhost:8000/v1/files/file-abc123def456/content" \
+  -H "Authorization: Bearer your-api-key" \
+  -o downloaded_file.csv
+```
+
+**Response:**
+Returns the original file content with appropriate MIME type headers.
+
+### DELETE /v1/files/{file_id}
+
+Delete a file from storage.
+
+**Path Parameters:**
+- `file_id` (required): The file ID
+
+**Example:**
+
+```bash
+curl -X DELETE "http://localhost:8000/v1/files/file-abc123def456" \
+  -H "Authorization: Bearer your-api-key"
+```
+
+**Response:**
+
+```json
+{
+  "id": "file-abc123def456",
+  "object": "file",
+  "deleted": true
+}
+```
+
+### GET /v1/files/health
+
+Check the health and configuration status of the file service.
+
+**Example:**
+
+```bash
+curl "http://localhost:8000/v1/files/health" \
+  -H "Authorization: Bearer your-api-key"
+```
+
+**Response:**
+
+```json
+{
+  "status": "healthy",
+  "service": "files",
+  "s3_bucket_configured": true,
+  "aws_region": "us-east-1",
+  "credentials_valid": true
+}
+```
+
+## Chat Completions with Files
+
+### Using Files in Chat Completions
+
+Add the `file_ids` parameter to any chat completion request to include file content as context.
+
+**Enhanced Chat Completion Request:**
+
+```json
+{
+  "model": "gpt-4o-mini",
+  "messages": [
+    {"role": "user", "content": "Analyze the trends in this sales data"}
+  ],
+  "file_ids": ["file-abc123def456", "file-def456ghi789"],
+  "temperature": 0.7,
+  "max_tokens": 1000
+}
+```
+
+**File Processing:**
+1. Files are automatically retrieved from S3 storage
+2. Content is processed based on file type:
+   - **CSV**: Structured with headers and sample rows
+   - **JSON**: Formatted and pretty-printed
+   - **Text/Markdown**: Full content preserved
+   - **HTML/XML**: Structure preserved with text extraction
+3. Processed content is prepended to the user message as context
+
+**Example File Context Format:**
+
+```
+=== UPLOADED FILES CONTEXT ===
+
+📄 **File: sales_data.csv** (text/csv, 2.1KB)
+Created: 2024-12-09T14:23:01Z
+
+**Processed Content:**
+Date,Product,Sales,Revenue
+2024-01-01,Widget A,150,$1500.00
+2024-01-02,Widget B,200,$2000.00
+2024-01-03,Widget A,175,$1750.00
+
+========================
+
+Analyze the trends in this sales data
+```
+
 ## Standard Endpoints
 
 ### GET /v1/chat/completions/health

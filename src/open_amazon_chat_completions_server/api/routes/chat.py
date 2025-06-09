@@ -14,6 +14,8 @@ from pydantic import ValidationError
 from src.open_amazon_chat_completions_server.services.llm_service_factory import (
     LLMServiceFactory,
 )
+from src.open_amazon_chat_completions_server.services.file_service import get_file_service
+from src.open_amazon_chat_completions_server.services.file_processing_service import get_file_processing_service
 
 # Import custom exceptions from the service layer and core
 from src.open_amazon_chat_completions_server.core.exceptions import (
@@ -177,6 +179,33 @@ async def unified_chat_completions(
                 f"Request model '{openai_dto_request.model}' overridden to '{actual_model_id_for_compute}' by routing logic."
             )
             openai_dto_request.model = actual_model_id_for_compute
+
+        # Process files if file_ids are provided
+        if hasattr(openai_dto_request, 'file_ids') and openai_dto_request.file_ids:
+            logger.debug(f"Processing {len(openai_dto_request.file_ids)} files for context")
+            
+            try:
+                file_context = await process_files_for_context(openai_dto_request.file_ids)
+                
+                if file_context:
+                    # Add file context to the first user message or create a system message
+                    if openai_dto_request.messages:
+                        # Find the first user message and prepend the file context
+                        for i, message in enumerate(openai_dto_request.messages):
+                            if message.role == "user":
+                                openai_dto_request.messages[i].content = f"{file_context}\n\n{message.content}"
+                                break
+                        else:
+                            # No user message found, add as system message at the beginning
+                            from src.open_amazon_chat_completions_server.core.models import Message
+                            system_message = Message(role="system", content=file_context)
+                            openai_dto_request.messages.insert(0, system_message)
+                    
+                    logger.debug(f"Added file context to request ({len(file_context)} characters)")
+                
+            except Exception as e:
+                logger.error(f"Error processing files, continuing without file context: {e}")
+                # Continue with the request even if file processing fails
 
         # Check if this is a streaming request
         is_streaming = openai_dto_request.stream or False
@@ -356,3 +385,67 @@ async def unified_health():
         "streaming_support": "enabled",
         "routing_method": "model_id_based"
     }
+
+
+async def process_files_for_context(file_ids: Optional[list[str]]) -> str:
+    """
+    Process uploaded files and return their content as context for the chat completion.
+    
+    Args:
+        file_ids: List of file IDs to process
+        
+    Returns:
+        Formatted string containing file contents for context
+    """
+    if not file_ids:
+        return ""
+    
+    try:
+        file_service = get_file_service()
+        file_processing_service = get_file_processing_service()
+        
+        file_contexts = []
+        
+        for file_id in file_ids:
+            try:
+                # Get file metadata and content
+                metadata = await file_service.get_file_metadata(file_id)
+                if not metadata:
+                    logger.warning(f"File {file_id} not found, skipping")
+                    continue
+                
+                content = await file_service.get_file_content(file_id)
+                if not content:
+                    logger.warning(f"No content found for file {file_id}, skipping")
+                    continue
+                
+                # Process the file content
+                processed_result = await file_processing_service.process_file(
+                    content, metadata.content_type, metadata.filename
+                )
+                
+                if processed_result["success"]:
+                    file_contexts.append(f"=== File: {metadata.filename} (ID: {file_id}) ===\n{processed_result['text_content']}\n")
+                else:
+                    logger.warning(f"Failed to process file {file_id}: {processed_result.get('error', 'Unknown error')}")
+                    # Still include basic info if processing fails
+                    file_contexts.append(f"=== File: {metadata.filename} (ID: {file_id}) ===\n[File content could not be processed: {processed_result.get('error', 'Unknown error')}]\n")
+                    
+            except Exception as e:
+                logger.error(f"Error processing file {file_id}: {e}")
+                file_contexts.append(f"=== File: {file_id} ===\n[Error processing file: {str(e)}]\n")
+        
+        if file_contexts:
+            return "\n".join([
+                "=== UPLOADED FILES CONTEXT ===",
+                "The following files have been uploaded and their content is provided below for your reference:",
+                "",
+                *file_contexts,
+                "=== END OF FILES CONTEXT ===\n"
+            ])
+        else:
+            return ""
+            
+    except Exception as e:
+        logger.error(f"Error processing files for context: {e}")
+        return f"\n=== FILE PROCESSING ERROR ===\nError processing uploaded files: {str(e)}\n=== END ERROR ===\n"
