@@ -33,7 +33,7 @@ jobs:
 
       - name: Install build dependencies with uv
         run: |
-          uv pip install build setuptools wheel
+          uv pip install build setuptools wheel setuptools_scm
           uv pip install -e ".[dev]"
 
       - name: Install build module
@@ -44,7 +44,7 @@ jobs:
       - name: Verify version consistency
         run: |
           # Get version from setuptools-scm (should match the git tag)
-          PYTHON_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version())")
+          PYTHON_VERSION=$(uv run python -c "from setuptools_scm import get_version; print(get_version())")
           # Get the release tag from GitHub
           GITHUB_TAG=${GITHUB_REF#refs/tags/}
           echo "Python package version: $PYTHON_VERSION"
