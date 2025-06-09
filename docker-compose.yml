@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  amazon-chat-completions-server:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      # Add environment variables as needed
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      # - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      # - AWS_REGION=${AWS_REGION}
+      # - S3_FILES_BUCKET=${S3_FILES_BUCKET}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Uncomment to mount environment file
+    # env_file:
+    #   - .env 

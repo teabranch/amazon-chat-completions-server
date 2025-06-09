@@ -41,6 +41,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
 
+      - name: Verify version consistency
+        run: |
+          # Get version from setuptools-scm (should match the git tag)
+          PYTHON_VERSION=$(python -c "from setuptools_scm import get_version; print(get_version())")
+          # Get the release tag from GitHub
+          GITHUB_TAG=${GITHUB_REF#refs/tags/}
+          echo "Python package version: $PYTHON_VERSION"
+          echo "GitHub release tag: $GITHUB_TAG"
+          # Ensure they match (allowing for 'v' prefix in tag)
+          if [[ "$GITHUB_TAG" == "v$PYTHON_VERSION" ]] || [[ "$GITHUB_TAG" == "$PYTHON_VERSION" ]]; then
+            echo "✅ Version consistency verified: $PYTHON_VERSION"
+          else
+            echo "❌ Version mismatch! Python: $PYTHON_VERSION, Tag: $GITHUB_TAG"
+            exit 1
+          fi
+
       - name: Build release distributions
         run: python -m build
 

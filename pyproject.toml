@@ -59,6 +59,7 @@ dev = [
 amazon-chat = "open_amazon_chat_completions_server.cli.main:cli"
 
 [tool.setuptools_scm]
+fallback_version = "0.0.0"
 
 
 [tool.setuptools.packages.find]

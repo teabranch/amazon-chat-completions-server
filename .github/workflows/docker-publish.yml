@@ -42,12 +42,17 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,format=short
-            type=ref,event=branch
+            # For pull requests, use PR number
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            # For branch pushes (non-main), use branch name
+            type=ref,event=branch,enable=${{ github.ref != format('refs/heads/{0}', 'main') }}
+            # For main branch, use 'latest' and commit SHA
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            type=sha,format=short,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            # For releases, use semantic versioning (this ensures version consistency)
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
