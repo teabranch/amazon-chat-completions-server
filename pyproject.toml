@@ -58,8 +58,7 @@ dev = [
 [project.scripts]
 amazon-chat = "open_amazon_chat_completions_server.cli.main:cli"
 
-[tool.setuptools.dynamic]
-version = {attr = "open_amazon_chat_completions_server.version.__version__"}
+[tool.setuptools_scm]
 
 
 [tool.setuptools.packages.find]
