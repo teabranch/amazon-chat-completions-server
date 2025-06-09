@@ -3,7 +3,7 @@ import uuid
 import boto3
 import botocore.config
 from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError, BotoCoreError
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import logging
 from io import BytesIO
 
@@ -345,4 +345,247 @@ class FileService:
             return True
         except Exception as e:
             logger.error(f"Failed to delete file {s3_key} from S3: {e}")
-            return False 
+            return False
+
+    async def get_file_metadata(self, file_id: str) -> Optional[FileMetadata]:
+        """
+        Retrieve metadata for a file by its ID.
+        
+        Args:
+            file_id: The file ID to retrieve
+            
+        Returns:
+            FileMetadata if found, None otherwise
+            
+        Raises:
+            ServiceApiError: If S3 operation fails
+        """
+        if not self.s3_bucket:
+            raise ConfigurationError("S3_FILES_BUCKET is not configured. Cannot retrieve files.")
+        
+        try:
+            # List objects with the file_id prefix to find the file
+            response = self.s3_client.list_objects_v2(
+                Bucket=self.s3_bucket,
+                Prefix=f"files/{file_id}-"
+            )
+            
+            if 'Contents' not in response or not response['Contents']:
+                logger.info(f"File {file_id} not found in S3")
+                return None
+            
+            # Get the first (and should be only) matching file
+            s3_object = response['Contents'][0]
+            s3_key = s3_object['Key']
+            
+            # Get detailed metadata
+            head_response = self.s3_client.head_object(
+                Bucket=self.s3_bucket,
+                Key=s3_key
+            )
+            
+            # Extract original filename from S3 key or metadata
+            original_filename = head_response.get('Metadata', {}).get('original_filename')
+            if not original_filename:
+                # Extract from S3 key format: files/{file_id}-{filename}
+                original_filename = s3_key.split('-', 1)[1] if '-' in s3_key else s3_key
+            
+            metadata = FileMetadata(
+                file_id=file_id,
+                filename=original_filename,
+                purpose=head_response.get('Metadata', {}).get('purpose', 'unknown'),
+                s3_bucket=self.s3_bucket,
+                s3_key=s3_key,
+                content_type=head_response.get('ContentType', 'application/octet-stream'),
+                file_size=head_response.get('ContentLength', 0),
+                created_at=int(head_response.get('LastModified').timestamp()) if head_response.get('LastModified') else 0
+            )
+            
+            return metadata
+            
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code")
+            if error_code == "NoSuchKey" or error_code == "404":
+                return None
+            logger.error(f"Failed to retrieve file metadata for {file_id}: {e}")
+            raise ServiceApiError(f"Failed to retrieve file metadata: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving file metadata for {file_id}: {e}")
+            raise ServiceApiError(f"Failed to retrieve file metadata: {str(e)}")
+
+    async def get_file_content(self, file_id: str) -> Optional[bytes]:
+        """
+        Retrieve the content of a file by its ID.
+        
+        Args:
+            file_id: The file ID to retrieve
+            
+        Returns:
+            File content as bytes if found, None otherwise
+            
+        Raises:
+            ServiceApiError: If S3 operation fails
+        """
+        if not self.s3_bucket:
+            raise ConfigurationError("S3_FILES_BUCKET is not configured. Cannot retrieve files.")
+        
+        try:
+            # First get the metadata to find the S3 key
+            metadata = await self.get_file_metadata(file_id)
+            if not metadata:
+                return None
+            
+            # Download the file content
+            response = self.s3_client.get_object(
+                Bucket=self.s3_bucket,
+                Key=metadata.s3_key
+            )
+            
+            return response['Body'].read()
+            
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code")
+            if error_code == "NoSuchKey" or error_code == "404":
+                return None
+            logger.error(f"Failed to retrieve file content for {file_id}: {e}")
+            raise ServiceApiError(f"Failed to retrieve file content: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving file content for {file_id}: {e}")
+            raise ServiceApiError(f"Failed to retrieve file content: {str(e)}")
+
+    async def list_files(self, purpose: Optional[str] = None, limit: int = 20) -> List[FileMetadata]:
+        """
+        List files with optional filtering by purpose.
+        
+        Args:
+            purpose: Optional purpose filter
+            limit: Maximum number of files to return
+            
+        Returns:
+            List of FileMetadata objects
+            
+        Raises:
+            ServiceApiError: If S3 operation fails
+        """
+        if not self.s3_bucket:
+            raise ConfigurationError("S3_FILES_BUCKET is not configured. Cannot list files.")
+        
+        try:
+            # List all files in the files/ prefix
+            response = self.s3_client.list_objects_v2(
+                Bucket=self.s3_bucket,
+                Prefix="files/",
+                MaxKeys=limit
+            )
+            
+            if 'Contents' not in response:
+                return []
+            
+            files = []
+            for s3_object in response['Contents']:
+                s3_key = s3_object['Key']
+                
+                # Extract file_id from S3 key format: files/{file_id}-{filename}
+                # File IDs start with "file-" so we need to be careful with splitting
+                key_without_prefix = s3_key.replace('files/', '')
+                
+                # Find the file ID by looking for the pattern "file-XXXXXXXX-"
+                # where XXXXXXXX is the unique part of the file ID
+                if not key_without_prefix.startswith('file-'):
+                    continue  # Skip malformed keys
+                
+                # Split after the file ID pattern: file-{unique_id}-{filename}
+                # We need to find the second dash after "file-"
+                parts = key_without_prefix.split('-')
+                if len(parts) < 3:  # Should have at least: ['file', 'uniqueid', 'filename']
+                    continue  # Skip malformed keys
+                
+                # Reconstruct file_id as "file-{unique_id}"
+                file_id = f"{parts[0]}-{parts[1]}"
+                
+                try:
+                    # Get detailed metadata
+                    head_response = self.s3_client.head_object(
+                        Bucket=self.s3_bucket,
+                        Key=s3_key
+                    )
+                    
+                    file_purpose = head_response.get('Metadata', {}).get('purpose', 'unknown')
+                    
+                    # Apply purpose filter if specified
+                    if purpose and file_purpose != purpose:
+                        continue
+                    
+                    # Get original filename from metadata or reconstruct from key
+                    original_filename = head_response.get('Metadata', {}).get('original_filename')
+                    if not original_filename:
+                        # Reconstruct filename from remaining parts
+                        original_filename = '-'.join(parts[2:])
+                    
+                    metadata = FileMetadata(
+                        file_id=file_id,
+                        filename=original_filename,
+                        purpose=file_purpose,
+                        s3_bucket=self.s3_bucket,
+                        s3_key=s3_key,
+                        content_type=head_response.get('ContentType', 'application/octet-stream'),
+                        file_size=head_response.get('ContentLength', 0),
+                        created_at=int(head_response.get('LastModified').timestamp()) if head_response.get('LastModified') else 0
+                    )
+                    
+                    files.append(metadata)
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to get metadata for {s3_key}: {e}")
+                    continue
+            
+            # Sort by creation time (newest first)
+            files.sort(key=lambda x: x.created_at, reverse=True)
+            
+            return files
+            
+        except Exception as e:
+            logger.error(f"Failed to list files: {e}")
+            raise ServiceApiError(f"Failed to list files: {str(e)}")
+
+    async def delete_file_by_id(self, file_id: str) -> bool:
+        """
+        Delete a file by its ID.
+        
+        Args:
+            file_id: The file ID to delete
+            
+        Returns:
+            True if deleted successfully, False if not found
+            
+        Raises:
+            ServiceApiError: If S3 operation fails
+        """
+        metadata = await self.get_file_metadata(file_id)
+        if not metadata:
+            return False
+        
+        return self.delete_file(metadata.s3_key)
+
+# Global instance
+_file_service: Optional[FileService] = None
+
+def get_file_service() -> FileService:
+    """Get the global file service instance."""
+    global _file_service
+    
+    if _file_service is None:
+        from ..utils.config_loader import app_config
+        
+        _file_service = FileService(
+            s3_bucket=app_config.S3_FILES_BUCKET,
+            AWS_REGION=app_config.AWS_REGION,
+            AWS_PROFILE=app_config.AWS_PROFILE,
+            AWS_ROLE_ARN=app_config.AWS_ROLE_ARN,
+            AWS_EXTERNAL_ID=app_config.AWS_EXTERNAL_ID,
+            AWS_ROLE_SESSION_NAME=app_config.AWS_ROLE_SESSION_NAME,
+            AWS_WEB_IDENTITY_TOKEN_FILE=app_config.AWS_WEB_IDENTITY_TOKEN_FILE,
+            validate_credentials=True,
+        )
+    
+    return _file_service 

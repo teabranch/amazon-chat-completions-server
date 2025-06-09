@@ -2,287 +2,434 @@
 
 ## Overview
 
-The Amazon Chat Completions Server now includes OpenAI-compatible file management functionality through the `/v1/files` endpoint. This feature allows you to upload files to Amazon S3 for use with various AI services.
+The Amazon Chat Completions Server provides a comprehensive OpenAI-compatible file management API with S3 backend storage. This allows you to upload, manage, and use files in your chat completions for enhanced AI interactions.
 
-## Configuration
+## Features
 
-### Required Environment Variables
-
-Add the following to your `.env` file:
-
-```bash
-# S3 Configuration for File Storage
-S3_FILES_BUCKET=your-s3-bucket-name
-
-# AWS Credentials (if not using IAM roles)
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
-
-# API Authentication
-API_KEY=your-secret-api-key
-```
-
-### S3 Bucket Setup
-
-1. Create an S3 bucket in your AWS account
-2. Ensure your AWS credentials have the following permissions:
-   - `s3:PutObject`
-   - `s3:GetObject`  
-   - `s3:DeleteObject`
-   - `s3:ListBucket`
-
-### CLI Configuration
-
-You can use the built-in CLI to configure these settings:
-
-```bash
-uv run amazon-chat configure
-```
+- **File Upload**: Upload files via multipart form data to S3
+- **File Retrieval**: List, get metadata, and download file content  
+- **File Processing**: Automatic text extraction from various file types
+- **Chat Integration**: Use uploaded files as context in chat completions
+- **OpenAI Compatibility**: Full compatibility with OpenAI's files API format
+- **S3 Storage**: Reliable, scalable storage with AWS S3
+- **Authentication**: AWS credential support (static keys, profiles, roles, web identity)
 
 ## API Endpoints
 
-### POST /v1/files
+### File Management
 
-Upload a file to the server for use with AI services.
+#### Upload File
+```http
+POST /v1/files
+Content-Type: multipart/form-data
 
-**Request Format:**
-- Method: `POST`
-- Content-Type: `multipart/form-data`
-- Authentication: Bearer token required
-
-**Parameters:**
-- `file` (required): The file to upload
-- `purpose` (required): The intended use of the file (e.g., "fine-tune", "assistants", "batch")
-
-**Example Request:**
-
-```bash
-curl -X POST http://localhost:8000/v1/files \
-  -H "Authorization: Bearer your-api-key" \
-  -F "file=@training_data.jsonl" \
-  -F "purpose=fine-tune"
+file: <file_data>
+purpose: <purpose_string>
 ```
 
-**Example Response:**
+#### List Files
+```http
+GET /v1/files?purpose=<purpose>&limit=<limit>
+```
 
+#### Get File Metadata
+```http
+GET /v1/files/{file_id}
+```
+
+#### Download File Content
+```http
+GET /v1/files/{file_id}/content
+```
+
+#### Delete File
+```http
+DELETE /v1/files/{file_id}
+```
+
+### Chat Completions with Files
+
+#### Enhanced Chat Completions
+```http
+POST /v1/chat/completions
+Content-Type: application/json
+
+{
+  "model": "claude-3-sonnet",
+  "messages": [
+    {"role": "user", "content": "Analyze the uploaded data"}
+  ],
+  "file_ids": ["file-abc123", "file-def456"]
+}
+```
+
+## Supported File Types
+
+The file processing service supports automatic text extraction from:
+
+- **Text files**: `.txt`, `.md`, `.py`, `.js`, `.html`
+- **Structured data**: `.json`, `.csv`, `.xml`
+- **Formats**: `text/plain`, `application/json`, `text/csv`, `application/xml`, `text/html`
+
+Unsupported file types are stored but won't be processed for chat completions.
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Required
+S3_FILES_BUCKET=your-files-bucket
+
+# AWS Authentication (choose one method)
+# Method 1: Static credentials
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+
+# Method 2: AWS Profile  
+AWS_PROFILE=your-profile
+
+# Method 3: IAM Role (for EC2/ECS)
+AWS_ROLE_ARN=arn:aws:iam::account:role/your-role
+AWS_EXTERNAL_ID=your-external-id
+
+# Method 4: Web Identity (for EKS/Fargate)
+AWS_WEB_IDENTITY_TOKEN_FILE=/var/run/secrets/eks.amazonaws.com/serviceaccount/token
+AWS_ROLE_ARN=arn:aws:iam::account:role/your-role
+
+# Optional
+AWS_REGION=us-east-1
+```
+
+### CLI Configuration
+
+```bash
+# Start server with file support
+amazon-chat-completions-server \
+  --s3-files-bucket your-files-bucket \
+  --aws-region us-east-1 \
+  --aws-profile your-profile
+```
+
+## Usage Examples
+
+### Python Client
+
+#### Basic File Upload and Chat
+```python
+import requests
+
+# Upload a file
+files = {"file": ("data.csv", open("data.csv", "rb"), "text/csv")}
+data = {"purpose": "assistants"}
+response = requests.post(
+    "http://localhost:8000/v1/files", 
+    files=files, 
+    data=data,
+    headers={"Authorization": "Bearer your-api-key"}
+)
+file_info = response.json()
+file_id = file_info["id"]
+
+# Use file in chat completion
+chat_request = {
+    "model": "claude-3-sonnet",
+    "messages": [
+        {"role": "user", "content": "Analyze the data in the uploaded CSV file"}
+    ],
+    "file_ids": [file_id]
+}
+response = requests.post(
+    "http://localhost:8000/v1/chat/completions",
+    json=chat_request,
+    headers={"Authorization": "Bearer your-api-key"}
+)
+print(response.json()["choices"][0]["message"]["content"])
+```
+
+#### File Management
+```python
+# List all files
+response = requests.get(
+    "http://localhost:8000/v1/files",
+    headers={"Authorization": "Bearer your-api-key"}
+)
+files = response.json()["data"]
+
+# Get specific file metadata
+response = requests.get(
+    f"http://localhost:8000/v1/files/{file_id}",
+    headers={"Authorization": "Bearer your-api-key"}
+)
+file_metadata = response.json()
+
+# Download file content
+response = requests.get(
+    f"http://localhost:8000/v1/files/{file_id}/content",
+    headers={"Authorization": "Bearer your-api-key"}
+)
+file_content = response.content
+
+# Delete file
+response = requests.delete(
+    f"http://localhost:8000/v1/files/{file_id}",
+    headers={"Authorization": "Bearer your-api-key"}
+)
+```
+
+### cURL Examples
+
+#### Upload File
+```bash
+curl -X POST "http://localhost:8000/v1/files" \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@data.json" \
+  -F "purpose=assistants"
+```
+
+#### Chat with File Context
+```bash
+curl -X POST "http://localhost:8000/v1/chat/completions" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-3-sonnet",
+    "messages": [
+      {"role": "user", "content": "What insights can you derive from the uploaded data?"}
+    ],
+    "file_ids": ["file-abc123"]
+  }'
+```
+
+#### List Files with Filter
+```bash
+curl "http://localhost:8000/v1/files?purpose=assistants&limit=10" \
+  -H "Authorization: Bearer your-api-key"
+```
+
+### JavaScript/Node.js
+
+```javascript
+// Upload file
+const formData = new FormData();
+formData.append('file', fs.createReadStream('document.txt'));
+formData.append('purpose', 'assistants');
+
+const uploadResponse = await fetch('http://localhost:8000/v1/files', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer your-api-key' },
+  body: formData
+});
+const fileInfo = await uploadResponse.json();
+
+// Use in chat completion  
+const chatResponse = await fetch('http://localhost:8000/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your-api-key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'claude-3-sonnet',
+    messages: [
+      { role: 'user', content: 'Summarize the uploaded document' }
+    ],
+    file_ids: [fileInfo.id]
+  })
+});
+```
+
+## File Processing
+
+When files are used in chat completions, they undergo automatic processing:
+
+1. **Content Extraction**: Text content is extracted based on file type
+2. **Context Formation**: File content is formatted with metadata
+3. **Message Integration**: Context is prepended to the first user message
+4. **AI Processing**: The LLM receives both the original prompt and file content
+
+### Processing Examples
+
+**Text File Processing:**
+```
+=== UPLOADED FILES CONTEXT ===
+The following files have been uploaded and their content is provided below for your reference:
+
+=== File: document.txt (ID: file-abc123) ===
+This is the content of the text file.
+Multiple lines are preserved.
+
+=== END OF FILES CONTEXT ===
+
+Original user message content...
+```
+
+**JSON File Processing:**
+```
+=== File: data.json (ID: file-def456) ===
+JSON File: data.json
+Object at root with 3 keys:
+  name: str = "John Doe"
+  age: int = 30
+  items: list
+
+JSON Content:
+{
+  "name": "John Doe",
+  "age": 30,
+  "items": ["a", "b", "c"]
+}
+```
+
+**CSV File Processing:**
+```
+=== File: sales.csv (ID: file-ghi789) ===
+CSV File: sales.csv
+Headers: date, product, quantity, price
+Total rows: 100
+
+Row 0 (Headers): date, product, quantity, price
+Row 1: 2024-01-01, Widget A, 10, 29.99
+Row 2: 2024-01-02, Widget B, 5, 49.99
+... and 97 more rows
+```
+
+## Response Formats
+
+### File Upload Response
 ```json
 {
   "id": "file-abc123def456",
   "object": "file",
   "bytes": 1024,
-  "created_at": 1613779657,
-  "filename": "training_data.jsonl",
-  "purpose": "fine-tune",
-  "status": "uploaded"
+  "created_at": 1234567890,
+  "filename": "document.txt",
+  "purpose": "assistants",
+  "status": "processed"
 }
 ```
 
-### GET /v1/files/health
-
-Check the health status of the files service.
-
-**Example Request:**
-
-```bash
-curl http://localhost:8000/v1/files/health
-```
-
-**Example Response:**
-
+### File List Response
 ```json
 {
-  "status": "healthy",
-  "service": "files",
-  "s3_bucket_configured": true,
-  "aws_region": "us-east-1"
+  "object": "list", 
+  "data": [
+    {
+      "id": "file-abc123",
+      "object": "file",
+      "bytes": 1024,
+      "created_at": 1234567890,
+      "filename": "document.txt", 
+      "purpose": "assistants",
+      "status": "processed"
+    }
+  ]
 }
 ```
 
-## File Storage
-
-### S3 Key Structure
-
-Files are stored in S3 with the following key pattern:
-```
-files/{file-id}-{original-filename}
-```
-
-Example: `files/file-abc123def456-training_data.jsonl`
-
-### Metadata
-
-Each uploaded file includes the following S3 metadata:
-- `file_id`: Unique identifier
-- `original_filename`: Original filename
-- `purpose`: Specified purpose
-- `uploaded_by`: "amazon-chat-completions-server"
-
-## Usage Examples
-
-### Python Example
-
-```python
-import requests
-
-# Configuration
-server_url = "http://localhost:8000"
-api_key = "your-api-key"
-
-# Upload a file
-with open("training_data.jsonl", "rb") as f:
-    response = requests.post(
-        f"{server_url}/v1/files",
-        headers={"Authorization": f"Bearer {api_key}"},
-        files={"file": f},
-        data={"purpose": "fine-tune"}
-    )
-
-if response.status_code == 200:
-    file_info = response.json()
-    print(f"File uploaded: {file_info['id']}")
-else:
-    print(f"Upload failed: {response.text}")
-```
-
-### cURL Example
-
-```bash
-# Upload a file
-curl -X POST http://localhost:8000/v1/files \
-  -H "Authorization: Bearer your-api-key" \
-  -F "file=@sample.json" \
-  -F "purpose=assistants"
-
-# Check service health
-curl http://localhost:8000/v1/files/health
-```
-
-### JavaScript Example
-
-```javascript
-const formData = new FormData();
-formData.append('file', fileInput.files[0]);
-formData.append('purpose', 'fine-tune');
-
-const response = await fetch('http://localhost:8000/v1/files', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer your-api-key'
-  },
-  body: formData
-});
-
-const result = await response.json();
-console.log('Upload result:', result);
+### File Deletion Response
+```json
+{
+  "id": "file-abc123",
+  "object": "file",
+  "deleted": true
+}
 ```
 
 ## Error Handling
 
 ### Common Error Responses
 
-**400 Bad Request - Missing file:**
+**File Not Found (404):**
 ```json
 {
-  "error": {
-    "message": "Missing required field: 'file'",
-    "type": "api_error",
-    "code": 400
-  }
+  "detail": "File file-nonexistent not found"
 }
 ```
 
-**400 Bad Request - Empty file:**
+**Invalid File ID Format (422):**
 ```json
 {
-  "error": {
-    "message": "File is empty",
-    "type": "api_error", 
-    "code": 400
-  }
+  "detail": "Invalid file ID format: invalid-id. File IDs must start with 'file-'"
 }
 ```
 
-**403 Forbidden - Invalid API key:**
+**S3 Configuration Error (500):**
 ```json
 {
-  "error": {
-    "message": "Invalid API key",
-    "type": "api_error",
-    "code": 403
-  }
+  "detail": "S3_FILES_BUCKET is not configured. Cannot upload files."
 }
 ```
 
-**500 Internal Server Error - S3 configuration:**
-```json
-{
-  "error": {
-    "message": "S3_FILES_BUCKET is not configured. Cannot upload files.",
-    "type": "api_error",
-    "code": 500
-  }
-}
+**File Processing Error:**
+Files that fail to process are still stored and usable, but show error context:
+```
+=== File: document.pdf (ID: file-abc123) ===
+[File content could not be processed: Unsupported file type: application/pdf]
 ```
 
-## OpenAI Compatibility
+## Health Checks
 
-This implementation is fully compatible with OpenAI's file upload API, meaning you can:
-
-1. Use existing OpenAI client libraries
-2. Switch between OpenAI and this server without code changes
-3. Maintain the same request/response format
-
-### Supported File Purposes
-
-- `fine-tune`: For fine-tuning models
-- `assistants`: For assistant tools
-- `batch`: For batch processing
-- Custom purposes are also supported
-
-## Security Considerations
-
-1. **API Authentication**: All requests require a valid API key
-2. **S3 Permissions**: Use principle of least privilege for S3 access
-3. **File Validation**: Files are validated for basic requirements
-4. **Secure Storage**: Files are stored securely in S3 with appropriate metadata
-
-## Testing
-
-Run the included tests to verify functionality:
-
+### Files Service Health
 ```bash
-# Run all file endpoint tests
-uv run pytest tests/test_files_endpoint.py -v
-
-# Run integration tests (requires AWS credentials)
-uv run pytest tests/test_files_endpoint.py::TestFilesEndpointIntegration -v
+curl "http://localhost:8000/v1/files/health"
 ```
+
+Response:
+```json
+{
+  "status": "healthy",
+  "service": "files", 
+  "s3_configured": true
+}
+```
+
+## Best Practices
+
+### File Management
+- Use descriptive filenames for better context
+- Set appropriate `purpose` values for organization
+- Delete unused files to manage storage costs
+- Monitor file sizes (large files may impact performance)
+
+### Chat Completions with Files
+- Limit file_ids to relevant files only (3-5 files max recommended)
+- Use specific prompts that reference the uploaded content
+- Consider file processing time for large files
+- Handle cases where files may not be processed successfully
+
+### Security
+- Ensure proper S3 bucket permissions
+- Use least-privilege IAM roles
+- Validate file content before upload in production
+- Monitor API access logs
 
 ## Troubleshooting
 
-### Common Issues
+### File Upload Issues
+1. **Check S3 bucket configuration**
+2. **Verify AWS credentials** 
+3. **Confirm bucket permissions**
+4. **Check file size limits**
 
-1. **"S3_FILES_BUCKET is not set"**
-   - Add `S3_FILES_BUCKET=your-bucket-name` to your `.env` file
+### File Processing Issues
+1. **Verify file type support**
+2. **Check file encoding (use UTF-8 when possible)**
+3. **Monitor processing logs**
+4. **Handle unsupported types gracefully**
 
-2. **"Access denied to S3 bucket"**
-   - Verify AWS credentials have proper S3 permissions
-   - Check bucket policy and IAM roles
+### Integration Issues
+1. **Validate file_ids format**
+2. **Ensure files exist before chat completion**
+3. **Check authentication on both endpoints**
+4. **Monitor request/response sizes**
 
-3. **"python-multipart" error**
-   - Install: `uv add python-multipart`
+## Limitations
 
-4. **File upload fails**
-   - Check file size limits
-   - Verify S3 bucket exists and is accessible
-   - Ensure proper AWS region configuration
+- **File Size**: Large files may impact processing time and memory usage
+- **File Types**: Only text-extractable formats are processed for chat context
+- **Concurrent Access**: S3 provides eventual consistency
+- **Rate Limits**: Subject to AWS S3 rate limits
+- **Processing Depth**: Complex file structures may be simplified in processing
 
-### Debug Mode
-
-Enable debug logging to troubleshoot issues:
-
-```bash
-export LOG_LEVEL=DEBUG
-uv run uvicorn src.open_amazon_chat_completions_server.api.app:app
-``` 
+For additional support, check the application logs and AWS CloudWatch for detailed error information. 

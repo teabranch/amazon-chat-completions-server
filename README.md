@@ -8,6 +8,7 @@ A unified, provider-agnostic chat completions API server that seamlessly integra
 - **🧠 Smart Format Detection**: Automatically detects OpenAI, Bedrock Claude, and Bedrock Titan formats
 - **🔀 Seamless Conversion**: Convert between any format combination (OpenAI ↔ Bedrock Claude ↔ Bedrock Titan)
 - **⚡ Model-Based Routing**: Automatic provider selection based on model ID patterns
+- **📁 File Query System**: Upload, process, and query files in chat completions with automatic content extraction
 - **🌊 Streaming Support**: Real-time streaming with format preservation
 - **🛡️ Enterprise Ready**: Authentication, logging, error handling, and monitoring
 - **💻 Full CLI**: Interactive chat, server management, and configuration tools
@@ -17,6 +18,7 @@ A unified, provider-agnostic chat completions API server that seamlessly integra
 
 - [Quick Start](#quick-start)
 - [Unified Endpoint](#unified-endpoint)
+- [File Query System](#file-query-system)
 - [Format Support](#format-support)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -142,6 +144,159 @@ The server automatically routes requests based on model ID patterns:
 | `amazon.*` | Bedrock | `amazon.titan-text-express-v1` |
 | `ai21.*`, `cohere.*`, `meta.*` | Bedrock | Various Bedrock models |
 
+## 📁 File Query System
+
+### Overview
+
+Upload, process, and query files directly in your chat completions. The system automatically extracts and formats content from various file types, making file data available as context for your AI conversations.
+
+### Quick Example
+
+```bash
+# 1. Upload a file
+curl -X POST "http://localhost:8000/v1/files" \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@data.csv" \
+  -F "purpose=assistants"
+
+# Response: {"id": "file-abc123", "filename": "data.csv", ...}
+
+# 2. Query the file in chat
+curl -X POST "http://localhost:8000/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {"role": "user", "content": "Analyze the data in this file"}
+    ],
+    "file_ids": ["file-abc123"]
+  }'
+```
+
+### Supported File Types
+
+| Format | MIME Type | Auto-Processing |
+|--------|-----------|-----------------|
+| Text | `text/plain` | ✅ Full content |
+| CSV | `text/csv` | ✅ Structured data with headers |
+| JSON | `application/json` | ✅ Formatted structure |
+| HTML | `text/html` | ✅ Text extraction |
+| XML | `application/xml` | ✅ Formatted structure |
+| Markdown | `text/markdown` | ✅ Full content |
+
+### File Operations
+
+#### Upload Files
+```bash
+POST /v1/files
+```
+Upload files to S3 storage with metadata extraction.
+
+#### List Files
+```bash
+GET /v1/files
+GET /v1/files?purpose=assistants
+```
+List uploaded files with optional filtering.
+
+#### Get File Metadata
+```bash
+GET /v1/files/{file_id}
+```
+Retrieve file information and metadata.
+
+#### Download File Content
+```bash
+GET /v1/files/{file_id}/content
+```
+Download original file content.
+
+#### Delete Files
+```bash
+DELETE /v1/files/{file_id}
+```
+Remove files from storage.
+
+### Chat Integration
+
+Add `file_ids` to any chat completion request to include file content as context:
+
+```json
+{
+  "model": "gpt-4o-mini",
+  "messages": [
+    {"role": "user", "content": "What patterns do you see in this data?"}
+  ],
+  "file_ids": ["file-abc123", "file-def456"]
+}
+```
+
+The system automatically:
+1. **Retrieves** file content from S3
+2. **Processes** content based on file type
+3. **Formats** for optimal AI consumption
+4. **Prepends** to your user message as context
+
+### Configuration
+
+Add S3 configuration to your `.env` file:
+
+```env
+# Required for file operations
+S3_FILES_BUCKET=your-s3-bucket-name
+AWS_REGION=us-east-1
+
+# AWS authentication (choose one method)
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+# OR
+AWS_PROFILE=your-aws-profile
+```
+
+### File Processing Examples
+
+**CSV Data Processing:**
+```
+=== UPLOADED FILES CONTEXT ===
+
+📄 **File: sales_data.csv** (text/csv, 1.2KB)
+Created: 2024-12-09T14:23:01Z
+
+**Processed Content:**
+Date,Product,Sales,Revenue
+2024-01-01,Widget A,150,$1500.00
+2024-01-02,Widget B,200,$2000.00
+...
+```
+
+**JSON Configuration:**
+```
+=== UPLOADED FILES CONTEXT ===
+
+📄 **File: config.json** (application/json, 500B)
+Created: 2024-12-09T14:23:01Z
+
+**Processed Content:**
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432
+  },
+  "features": ["auth", "logging"]
+}
+```
+
+### Health Check
+
+Monitor file service status:
+
+```bash
+curl "http://localhost:8000/v1/files/health"
+```
+
+Response includes S3 connectivity and credential validation.
+
 ## 🔀 Format Support
 
 ### All Format Combinations Supported
@@ -241,6 +396,9 @@ API_KEY=your-secret-api-key
 
 # Required: OpenAI (if using OpenAI models)
 OPENAI_API_KEY=sk-your-openai-api-key
+
+# Required: S3 File Storage (if using file query features)
+S3_FILES_BUCKET=your-s3-bucket-name
 
 # Required: AWS (if using Bedrock models)
 # Option 1: Static credentials

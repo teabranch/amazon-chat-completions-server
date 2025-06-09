@@ -1,12 +1,13 @@
 ---
+description: Amazon Chat Completions Server - A unified, provider-agnostic chat completions API server
 layout: default
-title: Home
 nav_order: 1
-description: "Amazon Chat Completions Server - A unified, provider-agnostic chat completions API server"
 permalink: /
+title: Home
 ---
 
 # Amazon Chat Completions Server
+
 {: .fs-9 }
 
 A unified, provider-agnostic chat completions API server supporting OpenAI and AWS Bedrock.
@@ -48,6 +49,26 @@ curl -X POST http://localhost:8000/v1/chat/completions \
   }'
 ```
 
+### File Query Example
+
+```bash
+# Upload a file
+curl -X POST http://localhost:8000/v1/files \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@data.csv" \
+  -F "purpose=assistants"
+
+# Use file in chat completion
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Analyze this data"}],
+    "file_ids": ["file-abc123def456"]
+  }'
+```
+
 ---
 
 ## 🔄 Unified Endpoint
@@ -84,6 +105,7 @@ All format combinations are supported through the unified endpoint:
 
 - **[Getting Started](getting-started)** - Installation, setup, and first steps
 - **[API Reference](api-reference)** - Complete API documentation
+- __[Files API](files_api)__ - File upload, processing, and query system
 - **[CLI Reference](cli-reference)** - Command-line interface guide
 - **[Architecture](guides/architecture)** - System design and architecture
 
@@ -110,6 +132,13 @@ All format combinations are supported through the unified endpoint:
 - **Auto-Detection**: Intelligent format detection
 - **Model-Based Routing**: Automatic provider selection
 - **Format Conversion**: Seamless translation between formats
+
+### File Query System
+
+- **File Upload**: Upload documents to S3 storage with OpenAI-compatible API
+- **Smart Processing**: Automatic content extraction from CSV, JSON, HTML, XML, Markdown, and text files
+- __Chat Integration__: Use `file_ids` parameter to include file content as context in conversations
+- **File Management**: Complete CRUD operations for uploaded files
 
 ### Enterprise Ready
 
@@ -138,4 +167,4 @@ All format combinations are supported through the unified endpoint:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/teabranch/open-amazon-chat-completions-server/blob/main/LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/teabranch/open-amazon-chat-completions-server/blob/main/LICENSE) file for details.

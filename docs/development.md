@@ -198,6 +198,179 @@ class LLMServiceFactory:
         if provider_name == "new_provider":
             api_key = os.getenv("NEW_PROVIDER_API_KEY")
             return NewProviderService(api_key=api_key)
+
+### 2. Adding New File Processing Types
+
+Extend the file processing service to support new file formats:
+
+```python
+# src/open_amazon_chat_completions_server/services/file_processing_service.py
+from typing import Tuple
+
+class FileProcessingService:
+    """Service for processing different file types for chat context"""
+    
+    def process_file(self, content: bytes, filename: str, content_type: str) -> str:
+        """Process file content based on type"""
+        if content_type == "application/pdf":
+            return self._process_pdf(content, filename)
+        elif content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            return self._process_docx(content, filename)
+        # Add more file types as needed
+        
+    def _process_pdf(self, content: bytes, filename: str) -> str:
+        """Extract text from PDF files"""
+        try:
+            import PyPDF2
+            from io import BytesIO
+            
+            pdf_reader = PyPDF2.PdfReader(BytesIO(content))
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text() + "\n"
+            
+            return f"**PDF Content from {filename}:**\n{text.strip()}"
+        except Exception as e:
+            return f"Error processing PDF {filename}: {str(e)}"
+    
+    def _process_docx(self, content: bytes, filename: str) -> str:
+        """Extract text from Word documents"""
+        try:
+            from docx import Document
+            from io import BytesIO
+            
+            doc = Document(BytesIO(content))
+            text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+            
+            return f"**Word Document Content from {filename}:**\n{text.strip()}"
+        except Exception as e:
+            return f"Error processing Word document {filename}: {str(e)}"
+```
+
+### 3. Extending File Storage Options
+
+Add support for different storage backends:
+
+```python
+# src/open_amazon_chat_completions_server/services/storage/base_storage.py
+from abc import ABC, abstractmethod
+from typing import Optional, List, Tuple
+
+class BaseStorageService(ABC):
+    """Abstract base class for file storage services"""
+    
+    @abstractmethod
+    async def upload_file(
+        self, 
+        file_content: bytes, 
+        filename: str, 
+        metadata: dict
+    ) -> str:
+        """Upload file and return file ID"""
+        pass
+    
+    @abstractmethod
+    async def get_file_content(self, file_id: str) -> Tuple[bytes, str, str]:
+        """Get file content, filename, and content type"""
+        pass
+    
+    @abstractmethod
+    async def delete_file(self, file_id: str) -> bool:
+        """Delete file and return success status"""
+        pass
+    
+    @abstractmethod
+    async def list_files(self, purpose: Optional[str] = None) -> List[dict]:
+        """List files with optional purpose filter"""
+        pass
+
+# src/open_amazon_chat_completions_server/services/storage/local_storage.py
+import os
+import json
+import aiofiles
+from typing import Optional, List, Tuple
+from .base_storage import BaseStorageService
+
+class LocalStorageService(BaseStorageService):
+    """Local filesystem storage implementation"""
+    
+    def __init__(self, storage_path: str = "./file_storage"):
+        self.storage_path = storage_path
+        os.makedirs(storage_path, exist_ok=True)
+        os.makedirs(os.path.join(storage_path, "files"), exist_ok=True)
+        os.makedirs(os.path.join(storage_path, "metadata"), exist_ok=True)
+    
+    async def upload_file(
+        self, 
+        file_content: bytes, 
+        filename: str, 
+        metadata: dict
+    ) -> str:
+        """Upload file to local storage"""
+        file_id = f"file-{uuid.uuid4().hex[:16]}"
+        
+        # Save file content
+        file_path = os.path.join(self.storage_path, "files", file_id)
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(file_content)
+        
+        # Save metadata
+        metadata_path = os.path.join(self.storage_path, "metadata", f"{file_id}.json")
+        metadata.update({"filename": filename, "file_id": file_id})
+        async with aiofiles.open(metadata_path, "w") as f:
+            await f.write(json.dumps(metadata))
+        
+        return file_id
+```
+
+### 4. Adding File API Endpoints
+
+Create new API endpoints for file operations:
+
+```python
+# src/open_amazon_chat_completions_server/api/routes/files.py
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from typing import Optional
+
+router = APIRouter()
+
+@router.post("/v1/files/batch")
+async def upload_multiple_files(
+    files: List[UploadFile] = File(...),
+    purpose: str = Form(...),
+    current_user = Depends(verify_api_key)
+):
+    """Upload multiple files at once"""
+    file_ids = []
+    
+    for file in files:
+        try:
+            file_content = await file.read()
+            # Process upload logic
+            file_id = await file_service.upload_file(
+                file_content=file_content,
+                filename=file.filename,
+                purpose=purpose,
+                content_type=file.content_type
+            )
+            file_ids.append(file_id)
+        except Exception as e:
+            # Handle partial failures
+            raise HTTPException(status_code=500, detail=f"Failed to upload {file.filename}: {str(e)}")
+    
+    return {"uploaded_files": file_ids}
+
+@router.get("/v1/files/search")
+async def search_files(
+    query: str,
+    limit: int = 20,
+    current_user = Depends(verify_api_key)
+):
+    """Search files by content or metadata"""
+    # Implement file search logic
+    results = await file_service.search_files(query, limit)
+    return {"results": results}
+```
         # ... existing providers
 ```
 

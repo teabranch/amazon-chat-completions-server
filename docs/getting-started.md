@@ -99,6 +99,9 @@ Alternatively, create a `.env` file in your project directory:
 OPENAI_API_KEY=sk-your_openai_api_key
 API_KEY=your-server-api-key
 
+# File Storage (optional - for file query features)
+S3_FILES_BUCKET=your-s3-bucket-name
+
 # AWS Configuration (choose one method)
 # Method 1: Static credentials
 AWS_ACCESS_KEY_ID=your_aws_access_key_id
@@ -192,6 +195,89 @@ response = requests.post(
 )
 
 print(response.json())
+```
+
+---
+
+## File Operations
+
+The server supports uploading and querying files in chat completions. This enables you to analyze documents, data files, and other content.
+
+### Setting up File Storage
+
+Add S3 configuration to your `.env` file:
+
+```env
+# Required for file operations
+S3_FILES_BUCKET=your-s3-bucket-name
+AWS_REGION=us-east-1
+
+# AWS credentials (same as for Bedrock)
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+```
+
+### Uploading Files
+
+```bash
+# Upload a CSV data file
+curl -X POST http://localhost:8000/v1/files \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@sales_data.csv" \
+  -F "purpose=assistants"
+
+# Response includes file ID: {"id": "file-abc123def456", ...}
+```
+
+### Querying Files in Chat
+
+Use the file ID from the upload response in your chat completions:
+
+```bash
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {"role": "user", "content": "What trends do you see in this sales data?"}
+    ],
+    "file_ids": ["file-abc123def456"]
+  }'
+```
+
+The system automatically:
+1. Retrieves the file content from S3
+2. Processes it based on file type (CSV, JSON, text, etc.)
+3. Includes the processed content as context in your chat
+
+### Supported File Types
+
+- **CSV** - Structured data with headers and sample rows
+- **JSON** - Configuration files and structured data
+- **Text/Markdown** - Documents and notes
+- **HTML/XML** - Web content and structured documents
+
+### Managing Files
+
+```bash
+# List uploaded files
+curl -H "Authorization: Bearer your-api-key" \
+     http://localhost:8000/v1/files
+
+# Get file details
+curl -H "Authorization: Bearer your-api-key" \
+     http://localhost:8000/v1/files/file-abc123def456
+
+# Download file content
+curl -H "Authorization: Bearer your-api-key" \
+     http://localhost:8000/v1/files/file-abc123def456/content \
+     -o downloaded_file.csv
+
+# Delete a file
+curl -X DELETE \
+     -H "Authorization: Bearer your-api-key" \
+     http://localhost:8000/v1/files/file-abc123def456
 ```
 
 ---
@@ -333,7 +419,8 @@ Key configuration variables:
 |----------|-------------|----------|
 | `OPENAI_API_KEY` | OpenAI API key | For OpenAI models |
 | `API_KEY` | Server authentication key | Yes |
-| `AWS_REGION` | AWS region | For Bedrock models |
+| `S3_FILES_BUCKET` | S3 bucket for file storage | For file operations |
+| `AWS_REGION` | AWS region | For Bedrock/file operations |
 | `AWS_PROFILE` | AWS profile name | Alternative to static credentials |
 | `DEFAULT_OPENAI_MODEL` | Default OpenAI model | No |
 | `LOG_LEVEL` | Logging level | No | 

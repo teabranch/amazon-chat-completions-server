@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, status
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, status, Query, Response
 from typing import Optional
 import logging
 
@@ -133,22 +133,162 @@ async def upload_file(
         await file.close()
 
 
-@router.get("/v1/files/health")
+@router.get("/health")
 async def files_health():
     """Health check endpoint for the files service."""
     try:
         file_service = get_file_service()
-        # Basic health check - just verify the service can be initialized
+        # Simple check that the service is configured
         return {
             "status": "healthy",
             "service": "files",
-            "s3_bucket_configured": bool(file_service.s3_bucket),
-            "aws_region": file_service.AWS_REGION
+            "s3_configured": file_service.s3_bucket is not None
         }
     except Exception as e:
-        logger.error(f"Files health check failed: {e}")
         return {
-            "status": "unhealthy",
+            "status": "unhealthy", 
             "service": "files",
             "error": str(e)
-        } 
+        }
+
+@router.get("/v1/files/health")
+async def files_health_v1():
+    """Health check endpoint for the files service - v1 API."""
+    try:
+        file_service = get_file_service()
+        
+        # Validate AWS credentials if possible
+        try:
+            await file_service.validate_credentials()
+            credentials_valid = True
+        except Exception:
+            credentials_valid = False
+        
+        return {
+            "status": "healthy",
+            "service": "files",
+            "s3_bucket_configured": file_service.s3_bucket is not None,
+            "aws_region": getattr(file_service, 'AWS_REGION', 'us-east-1'),
+            "credentials_valid": credentials_valid
+        }
+    except Exception as e:
+        logger.error(f"Failed to get file health: {e}")
+        return {
+            "status": "unhealthy", 
+            "service": "files",
+            "error": str(e)
+        }
+
+@router.get("/v1/files")
+async def list_files(
+    purpose: Optional[str] = Query(None, description="Filter files by purpose"),
+    limit: int = Query(20, ge=1, le=100, description="Number of files to retrieve")
+):
+    """List files with optional filtering."""
+    try:
+        file_service = get_file_service()
+        files = await file_service.list_files(purpose=purpose, limit=limit)
+        
+        # Convert to OpenAI-compatible format
+        return {
+            "object": "list",
+            "data": [
+                {
+                    "id": file.file_id,
+                    "object": "file",
+                    "bytes": file.file_size,
+                    "created_at": file.created_at,
+                    "filename": file.filename,
+                    "purpose": file.purpose,
+                    "status": "processed"  # Assuming all files are processed
+                }
+                for file in files
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Failed to list files: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to list files: {str(e)}")
+
+@router.get("/v1/files/{file_id}")
+async def get_file(file_id: str):
+    """Retrieve metadata for a specific file."""
+    try:
+        file_service = get_file_service()
+        metadata = await file_service.get_file_metadata(file_id)
+        
+        if not metadata:
+            raise HTTPException(status_code=404, detail=f"File {file_id} not found")
+        
+        # Return OpenAI-compatible format
+        return {
+            "id": metadata.file_id,
+            "object": "file",
+            "bytes": metadata.file_size,
+            "created_at": metadata.created_at,
+            "filename": metadata.filename,
+            "purpose": metadata.purpose,
+            "status": "processed"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get file {file_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve file: {str(e)}")
+
+@router.get("/v1/files/{file_id}/content")
+async def get_file_content(file_id: str):
+    """Download file content."""
+    try:
+        file_service = get_file_service()
+        
+        # Get metadata first to check if file exists and get content type
+        metadata = await file_service.get_file_metadata(file_id)
+        if not metadata:
+            raise HTTPException(status_code=404, detail=f"File {file_id} not found")
+        
+        # Get file content
+        content = await file_service.get_file_content(file_id)
+        if content is None:
+            raise HTTPException(status_code=404, detail=f"File content for {file_id} not found")
+        
+        # Return file content with appropriate headers
+        return Response(
+            content=content,
+            media_type=metadata.content_type,
+            headers={
+                "Content-Disposition": f"attachment; filename={metadata.filename}",
+                "Content-Length": str(len(content))
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get file content for {file_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve file content: {str(e)}")
+
+@router.delete("/v1/files/{file_id}")
+async def delete_file(file_id: str):
+    """Delete a file."""
+    try:
+        file_service = get_file_service()
+        
+        # Check if file exists first
+        metadata = await file_service.get_file_metadata(file_id)
+        if not metadata:
+            raise HTTPException(status_code=404, detail=f"File {file_id} not found")
+        
+        # Delete the file
+        success = await file_service.delete_file_by_id(file_id)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to delete file {file_id}")
+        
+        return {
+            "id": file_id,
+            "object": "file",
+            "deleted": True
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete file {file_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}") 
