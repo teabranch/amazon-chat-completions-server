@@ -1,16 +1,17 @@
-from typing import List, Optional, Literal, Dict, Any, Union
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
 
 # --- Core Message Structures (OpenAI-like) ---
 class Message(BaseModel):
     role: Literal["system", "user", "assistant", "tool"]
-    content: Optional[Union[str, List[Dict[str, Any]]]] = (
+    content: str | list[dict[str, Any]] | None = (
         None  # content can be string or list of content blocks for multimodal, and can be None for tool calls
     )
-    name: Optional[str] = None  # For tool calls
-    tool_call_id: Optional[str] = None  # For tool responses
-    tool_calls: Optional[List[Dict[str, Any]]] = (
+    name: str | None = None  # For tool calls
+    tool_call_id: str | None = None  # For tool responses
+    tool_calls: list[dict[str, Any]] | None = (
         None  # For assistant messages with tool calls
     )
 
@@ -54,14 +55,34 @@ class Message(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
-    messages: List[Message] = Field(..., min_length=1)
+    messages: list[Message] = Field(..., min_length=1)
     model: str  # This will be the generic model identifier, mapped internally
-    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
-    max_tokens: Optional[int] = Field(default=None, gt=0)
-    stream: Optional[bool] = False
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    max_tokens: int | None = Field(default=None, gt=0)
+    stream: bool | None = False
     # Add other common OpenAI parameters as needed (e.g., top_p, stop, presence_penalty, etc.)
-    tool_choice: Optional[Union[str, Dict[str, Any]]] = None
-    tools: Optional[List[Dict[str, Any]]] = None
+    tool_choice: str | dict[str, Any] | None = None
+    tools: list[dict[str, Any]] | None = None
+
+    # File management support
+    file_ids: list[str] | None = Field(
+        default=None,
+        description="List of file IDs to include in the conversation context",
+    )
+
+    # Knowledge Base support
+    knowledge_base_id: str | None = Field(
+        default=None, description="Knowledge Base ID for RAG functionality"
+    )
+    auto_kb: bool | None = Field(
+        default=False, description="Auto-detect when to use knowledge base"
+    )
+    retrieval_config: dict[str, Any] | None = Field(
+        default=None, description="Knowledge base retrieval configuration"
+    )
+    citation_format: Literal["openai", "bedrock"] | None = Field(
+        default="openai", description="Citation format preference"
+    )
 
     @property
     def is_tool_call_request(self) -> bool:
@@ -91,14 +112,14 @@ class ChatCompletionRequest(BaseModel):
 
 
 class ChoiceDelta(BaseModel):
-    content: Optional[str] = None
-    role: Optional[Literal["system", "user", "assistant", "tool"]] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    content: str | None = None
+    role: Literal["system", "user", "assistant", "tool"] | None = None
+    tool_calls: list[dict[str, Any]] | None = None
 
 
 class ChatCompletionChunkChoice(BaseModel):
     delta: ChoiceDelta
-    finish_reason: Optional[
+    finish_reason: (
         Literal[
             "stop",
             "length",
@@ -108,22 +129,23 @@ class ChatCompletionChunkChoice(BaseModel):
             "max_tokens",
             "stop_sequence",
         ]
-    ] = None
+        | None
+    ) = None
     index: int
 
 
 class ChatCompletionChunk(BaseModel):
     id: str
-    choices: List[ChatCompletionChunkChoice]
+    choices: list[ChatCompletionChunkChoice]
     created: int
     model: str
     object: Literal["chat.completion.chunk"] = "chat.completion.chunk"
-    system_fingerprint: Optional[str] = None
+    system_fingerprint: str | None = None
 
 
 class ChatCompletionChoice(BaseModel):
     message: Message
-    finish_reason: Optional[
+    finish_reason: (
         Literal[
             "stop",
             "length",
@@ -133,24 +155,25 @@ class ChatCompletionChoice(BaseModel):
             "max_tokens",
             "stop_sequence",
         ]
-    ] = None
+        | None
+    ) = None
     index: int
 
 
 class Usage(BaseModel):
     prompt_tokens: int
-    completion_tokens: Optional[int] = None
+    completion_tokens: int | None = None
     total_tokens: int
 
 
 class ChatCompletionResponse(BaseModel):
     id: str
-    choices: List[ChatCompletionChoice]
+    choices: list[ChatCompletionChoice]
     created: int  # Unix timestamp
     model: str  # Model ID used for the completion
     object: Literal["chat.completion"] = "chat.completion"
-    system_fingerprint: Optional[str] = None
-    usage: Optional[Usage] = None
+    system_fingerprint: str | None = None
+    usage: Usage | None = None
 
 
 # --- Bedrock Specific Structures (Illustrative - will be more detailed in adapter/strategy) ---
@@ -161,25 +184,25 @@ class ChatCompletionResponse(BaseModel):
 
 class BedrockClaudeMessage(BaseModel):
     role: Literal["user", "assistant"]
-    content: Union[str, List[Dict[str, Any]]]
+    content: str | list[dict[str, Any]]
 
 
 class BedrockClaudeRequestBody(BaseModel):
     anthropic_version: str = "bedrock-2023-05-31"
-    messages: List[BedrockClaudeMessage]
-    system: Optional[str] = None
+    messages: list[BedrockClaudeMessage]
+    system: str | None = None
     max_tokens: int = Field(
         ..., alias="max_tokens_to_sample"
     )  # Example of alias for older versions if needed
-    temperature: Optional[float] = None
+    temperature: float | None = None
     # ... other Claude specific params (top_p, top_k, stop_sequences)
 
 
 class BedrockTitanTextGenerationConfig(BaseModel):
     maxTokenCount: int
-    temperature: Optional[float] = None
-    stopSequences: Optional[List[str]] = None
-    topP: Optional[float] = None
+    temperature: float | None = None
+    stopSequences: list[str] | None = None
+    topP: float | None = None
 
 
 class BedrockTitanRequestBody(BaseModel):
@@ -190,7 +213,7 @@ class BedrockTitanRequestBody(BaseModel):
 
 class BedrockContentBlock(BaseModel):
     type: str
-    text: Optional[str] = None
+    text: str | None = None
     # Potentially other types like 'image' for multimodal
 
 
@@ -198,11 +221,11 @@ class BedrockClaudeResponse(BaseModel):
     id: str
     type: str
     role: Literal["assistant"]
-    content: List[BedrockContentBlock]
+    content: list[BedrockContentBlock]
     model: str
     stop_reason: Literal["end_turn", "max_tokens", "stop_sequence"]
-    stop_sequence: Optional[str] = None
-    usage: Dict[str, int]  # { "input_tokens": ..., "output_tokens": ... }
+    stop_sequence: str | None = None
+    usage: dict[str, int]  # { "input_tokens": ..., "output_tokens": ... }
 
 
 class BedrockTitanResult(BaseModel):
@@ -213,12 +236,12 @@ class BedrockTitanResult(BaseModel):
 
 class BedrockTitanResponse(BaseModel):
     inputTextTokenCount: int
-    results: List[BedrockTitanResult]
+    results: list[BedrockTitanResult]
 
 
 # The following ModelProviderInfo might be useful for the service factory or model listing logic.
 class ModelProviderInfo(BaseModel):
     id: str  # The model ID recognized by the API (e.g., "gpt-4o-mini", "anthropic.us.anthropic.claude-3-5-haiku-20241022-v1:0-20240307-v1:0")
     provider: str  # e.g., "openai", "bedrock"
-    display_name: Optional[str] = None  # A user-friendly name
+    display_name: str | None = None  # A user-friendly name
     # Add other relevant details, e.g., if it supports streaming, context window size etc.

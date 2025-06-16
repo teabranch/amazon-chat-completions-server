@@ -1,6 +1,7 @@
-from fastapi import HTTPException, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
+
+from fastapi import HTTPException, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 security = HTTPBearer(auto_error=False)
 
@@ -26,7 +27,9 @@ def is_valid_api_key(api_key: str) -> bool:
     return api_key == current_api_key
 
 
-async def verify_api_key(credentials: HTTPAuthorizationCredentials = Security(security)):
+async def verify_api_key(
+    credentials: HTTPAuthorizationCredentials = Security(security),
+):
     if not credentials:
         # Consistent error structure as per custom http_exception_handler
         raise HTTPException(status_code=403, detail="Not authenticated")

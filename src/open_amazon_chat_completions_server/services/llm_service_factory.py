@@ -1,12 +1,13 @@
 import logging
-from typing import Optional, Dict, Any
-from functools import lru_cache
+from functools import cache
+from typing import Any
 
-from .llm_service_abc import AbstractLLMService
 from ..adapters.bedrock_to_openai_adapter import BedrockToOpenAIAdapter
-from ..core.exceptions import ModelNotFoundError, ConfigurationError
-from .openai_service import OpenAIService
+from ..core.exceptions import ConfigurationError, ModelNotFoundError
 from .bedrock_service import BedrockService
+from .llm_service_abc import AbstractLLMService
+from .openai_service import OpenAIService
+
 # Import BedrockService once it's created
 # from .bedrock_service import BedrockService
 
@@ -14,16 +15,16 @@ logger = logging.getLogger(__name__)
 
 # In-memory cache for service instances to avoid re-initializing adapters for the same model.
 # Key: (provider_name, model_id_or_key_for_provider, frozenset(kwargs.items()))
-_service_cache: Dict[tuple, AbstractLLMService] = {}
+_service_cache: dict[tuple, AbstractLLMService] = {}
 
 
 class LLMServiceFactory:
     """Factory for creating LLM service instances."""
 
     @staticmethod
-    @lru_cache(maxsize=None)  # Cache service instances for efficiency
+    @cache  # Cache service instances for efficiency
     def get_service(
-        provider_name: str, model_id: Optional[str] = None, **kwargs: Any
+        provider_name: str, model_id: str | None = None, **kwargs: Any
     ) -> AbstractLLMService:
         """
         Gets an LLM service instance for the specified provider and model.
@@ -58,18 +59,21 @@ class LLMServiceFactory:
             logger.debug(f"Creating/getting BedrockService. Passed kwargs: {kwargs}")
             # For testing environments, disable credential validation to avoid AWS API calls
             # This can be overridden by explicitly passing validate_credentials=True
-            if 'validate_credentials' not in kwargs:
+            if "validate_credentials" not in kwargs:
                 # Check if we're in a testing environment
                 import os
+
                 is_testing = (
-                    os.getenv('PYTEST_CURRENT_TEST') is not None or
-                    'pytest' in os.getenv('_', '') or
-                    any('pytest' in arg for arg in __import__('sys').argv)
+                    os.getenv("PYTEST_CURRENT_TEST") is not None
+                    or "pytest" in os.getenv("_", "")
+                    or any("pytest" in arg for arg in __import__("sys").argv)
                 )
                 if is_testing:
-                    kwargs['validate_credentials'] = False
-                    logger.debug("Testing environment detected, disabling AWS credential validation")
-            
+                    kwargs["validate_credentials"] = False
+                    logger.debug(
+                        "Testing environment detected, disabling AWS credential validation"
+                    )
+
             return BedrockService(**kwargs)
 
         else:
@@ -97,8 +101,8 @@ class LLMServiceFactory:
                 f"Creating new LLM service (original factory path) for provider: {provider_name_lower}, model: {model_id}, kwargs: {kwargs}"
             )
 
-            service_instance: Optional[AbstractLLMService] = None
-            adapter_instance: Optional[Any] = None  # Original type was BaseLLMAdapter
+            service_instance: AbstractLLMService | None = None
+            adapter_instance: Any | None = None  # Original type was BaseLLMAdapter
 
             # This section needs to be restored with actual adapter/service imports from original design if used
             if (
@@ -108,10 +112,10 @@ class LLMServiceFactory:
                     raise ModelNotFoundError(
                         "model_id is required for OpenAI provider (adapter path)."
                     )
+                from ..adapters.openai_adapter import OpenAIAdapter
                 from .concrete_services import (
                     OpenAIService as ConcreteOpenAIService,
                 )  # Assuming this was the structure
-                from ..adapters.openai_adapter import OpenAIAdapter
 
                 adapter_instance = OpenAIAdapter(model_id=model_id, **kwargs)
                 service_instance = ConcreteOpenAIService(
@@ -123,8 +127,8 @@ class LLMServiceFactory:
                     raise ModelNotFoundError(
                         "model_id is required for Bedrock provider (adapter path)."
                     )
-                from .concrete_services import BedrockService as ConcreteBedrockService
                 from ..adapters.bedrock.bedrock_adapter import BedrockAdapter
+                from .concrete_services import BedrockService as ConcreteBedrockService
 
                 adapter_instance = BedrockAdapter(model_id=model_id, **kwargs)
                 service_instance = ConcreteBedrockService(adapter=adapter_instance)
@@ -203,7 +207,7 @@ class LLMServiceFactory:
         return LLMServiceFactory.get_service(provider, model_id=model_id, **kwargs)
 
     @staticmethod
-    @lru_cache(maxsize=None)
+    @cache
     def get_reverse_adapter(
         openai_model_id: str, **kwargs: Any
     ) -> BedrockToOpenAIAdapter:
@@ -238,7 +242,7 @@ class LLMServiceFactory:
         return ["openai", "bedrock"]
 
     @staticmethod
-    def get_supported_models() -> Dict[str, list]:
+    def get_supported_models() -> dict[str, list]:
         """Get list of supported models by provider"""
         return {
             "openai": ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "gpt-4-turbo"],
@@ -251,7 +255,7 @@ class LLMServiceFactory:
                 "titan-text-express",
                 # Nova models
                 "nova-canvas",
-                "nova-lite", 
+                "nova-lite",
                 "nova-micro",
                 "nova-premier",
                 "nova-pro",

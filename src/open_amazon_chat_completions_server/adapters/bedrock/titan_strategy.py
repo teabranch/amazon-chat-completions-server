@@ -1,25 +1,25 @@
 import logging
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
-from ...core.models import (
-    Message,
-    ChatCompletionRequest,
-    ChatCompletionResponse,
-    ChatCompletionChunk,
-    ChatCompletionChoice,
-    ChoiceDelta,
-    ChatCompletionChunkChoice,
-    Usage,
-)
 from ...core.exceptions import (
     APIRequestError,
     LLMIntegrationError,
     UnsupportedFeatureError,
 )
+from ...core.models import (
+    ChatCompletionChoice,
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChoiceDelta,
+    Message,
+    Usage,
+)
 from ...utils.config_loader import app_config
+from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class TitanStrategy(BedrockAdapterStrategy):
         logger.info(f"TitanStrategy initialized for model: {self.model_id}")
 
     def _format_messages_to_titan_input_text(
-        self, messages: List[Message], system_prompt: Optional[str]
+        self, messages: list[Message], system_prompt: str | None
     ) -> str:
         """Formats a list of messages and an optional system prompt into Titan's single inputText string."""
         formatted_parts = []
@@ -81,8 +81,8 @@ class TitanStrategy(BedrockAdapterStrategy):
         return "\n".join(formatted_parts)
 
     def prepare_request_payload(
-        self, request: ChatCompletionRequest, adapter_config_kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request: ChatCompletionRequest, adapter_config_kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         if request.tools or request.tool_choice:
             raise UnsupportedFeatureError(
                 "Amazon Titan models do not support OpenAI-style 'tools' or 'tool_choice' parameters directly through this adapter strategy."
@@ -152,7 +152,7 @@ class TitanStrategy(BedrockAdapterStrategy):
         return payload
 
     def parse_response(
-        self, provider_response: Dict[str, Any], original_request: ChatCompletionRequest
+        self, provider_response: dict[str, Any], original_request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         # Titan response structure: {"inputTextTokenCount": N, "results": [{"tokenCount": M, "outputText": "...", "completionReason": "..."}]}
         if (
@@ -194,7 +194,7 @@ class TitanStrategy(BedrockAdapterStrategy):
 
     async def handle_stream_chunk(
         self,
-        chunk_data: Dict[str, Any],
+        chunk_data: dict[str, Any],
         original_request: ChatCompletionRequest,
         response_id: str,
         created_timestamp: int,

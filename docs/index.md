@@ -101,6 +101,21 @@ All format combinations are supported through the unified endpoint:
 
 ## 📚 Documentation
 
+### Core Features
+- **[Getting Started](getting-started.md)** - Quick setup and basic usage
+- **[API Reference](api-reference.md)** - Complete API documentation
+- **[CLI Reference](cli-reference.md)** - Command-line interface guide
+
+### Advanced Features
+- **[Knowledge Bases (RAG)](KNOWLEDGE_BASES.md)** - 🧠 **NEW!** Bedrock Knowledge Bases integration for RAG
+- **[Files API](FILES_API.md)** - File upload and management capabilities
+
+### Development
+- **[Development Guide](development.md)** - Contributing and development setup
+- **[Testing](testing.md)** - Testing strategies and examples
+
+## 📚 Original Documentation
+
 ### Core Documentation
 
 - **[Getting Started](getting-started)** - Installation, setup, and first steps

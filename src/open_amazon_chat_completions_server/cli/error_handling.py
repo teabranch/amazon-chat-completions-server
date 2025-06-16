@@ -1,18 +1,17 @@
-from typing import Optional
 import requests
 from rich.console import Console
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
 
 
 class CLIErrorHandler:
     """Handles CLI-specific error cases with rich formatting."""
 
-    def __init__(self, console: Optional[Console] = None):
+    def __init__(self, console: Console | None = None):
         self.console = console or Console()
 
     def handle_http_error(self, error: requests.HTTPError):

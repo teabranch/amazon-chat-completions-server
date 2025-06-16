@@ -1,20 +1,20 @@
 import logging
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
+from ...core.exceptions import UnsupportedFeatureError
 from ...core.models import (
-    Message,
+    ChatCompletionChoice,
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
-    ChatCompletionChoice,
     ChoiceDelta,
-    ChatCompletionChunkChoice,
+    Message,
     Usage,
 )
-from ...core.exceptions import UnsupportedFeatureError
+from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -27,33 +27,39 @@ class NovaStrategy(BedrockAdapterStrategy):
         logger.info(f"NovaStrategy initialized for model: {self.model_id}")
 
     def _format_messages_to_nova_format(
-        self, messages: List[Message], system_prompt: Optional[str]
-    ) -> List[Dict[str, Any]]:
+        self, messages: list[Message], system_prompt: str | None
+    ) -> list[dict[str, Any]]:
         """Formats messages into Nova's expected message format (similar to Claude)."""
         nova_messages = []
-        
+
         for msg in messages:
             if msg.role == "system":
                 continue  # System prompt handled separately
             elif msg.role in ["user", "assistant"]:
-                nova_messages.append({
-                    "role": msg.role,
-                    "content": [{"text": msg.content}] if isinstance(msg.content, str) else msg.content
-                })
+                nova_messages.append(
+                    {
+                        "role": msg.role,
+                        "content": [{"text": msg.content}]
+                        if isinstance(msg.content, str)
+                        else msg.content,
+                    }
+                )
             elif msg.role == "tool":
                 logger.warning(
                     f"Nova model {self.model_id} received tool role. Converting to user message."
                 )
-                nova_messages.append({
-                    "role": "user",
-                    "content": [{"text": f"Tool Response: {msg.content}"}]
-                })
+                nova_messages.append(
+                    {
+                        "role": "user",
+                        "content": [{"text": f"Tool Response: {msg.content}"}],
+                    }
+                )
 
         return nova_messages
 
     def prepare_request_payload(
-        self, request: ChatCompletionRequest, adapter_config_kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request: ChatCompletionRequest, adapter_config_kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         if request.tools or request.tool_choice:
             # Nova models may support tools in the future, but for now we'll disable
             raise UnsupportedFeatureError(
@@ -63,7 +69,9 @@ class NovaStrategy(BedrockAdapterStrategy):
         system_prompt, processed_messages = self._extract_system_prompt_and_messages(
             request.messages
         )
-        nova_messages = self._format_messages_to_nova_format(processed_messages, system_prompt)
+        nova_messages = self._format_messages_to_nova_format(
+            processed_messages, system_prompt
+        )
 
         # Nova parameters (similar to Claude but with Nova-specific naming)
         max_tokens = (
@@ -71,7 +79,7 @@ class NovaStrategy(BedrockAdapterStrategy):
             if request.max_tokens is not None
             else self._get_default_param("max_tokens", default_value=4096)
         )
-        
+
         temperature = (
             request.temperature
             if request.temperature is not None
@@ -93,14 +101,17 @@ class NovaStrategy(BedrockAdapterStrategy):
             "top_p": "topP",
             "stop_sequences": "stopSequences",
         }
-        
+
         for generic_param, nova_param in nova_params.items():
             value = None
-            if hasattr(request, generic_param) and getattr(request, generic_param) is not None:
+            if (
+                hasattr(request, generic_param)
+                and getattr(request, generic_param) is not None
+            ):
                 value = getattr(request, generic_param)
             elif generic_param in adapter_config_kwargs:
                 value = adapter_config_kwargs[generic_param]
-            
+
             if value is not None:
                 payload[nova_param] = value
 
@@ -108,13 +119,13 @@ class NovaStrategy(BedrockAdapterStrategy):
         return payload
 
     def parse_response(
-        self, provider_response: Dict[str, Any], original_request: ChatCompletionRequest
+        self, provider_response: dict[str, Any], original_request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         # Nova response structure (similar to Claude): {"output": {"message": {"content": [...], "role": "assistant"}}, "stopReason": "...", "usage": {...}}
         output = provider_response.get("output", {})
         message_data = output.get("message", {})
         content_blocks = message_data.get("content", [])
-        
+
         # Extract text content
         full_text_content = ""
         for block in content_blocks:
@@ -155,7 +166,7 @@ class NovaStrategy(BedrockAdapterStrategy):
 
     async def handle_stream_chunk(
         self,
-        chunk_data: Dict[str, Any],
+        chunk_data: dict[str, Any],
         original_request: ChatCompletionRequest,
         response_id: str,
         created_timestamp: int,
@@ -163,7 +174,7 @@ class NovaStrategy(BedrockAdapterStrategy):
         # Nova streaming format (similar to Claude)
         delta_content = None
         finish_reason = None
-        
+
         chunk_type = chunk_data.get("type")
         if chunk_type == "contentBlockDelta":
             delta_info = chunk_data.get("delta", {})
@@ -199,4 +210,4 @@ class NovaStrategy(BedrockAdapterStrategy):
             "stop_sequence": "stop",
             "content_filtered": "content_filter",
         }
-        return mapping.get(provider_reason.lower(), provider_reason) 
+        return mapping.get(provider_reason.lower(), provider_reason)

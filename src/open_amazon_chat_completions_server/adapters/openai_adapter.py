@@ -1,24 +1,25 @@
 import logging
 import time
-from typing import Any, AsyncGenerator, Dict
 import uuid
+from collections.abc import AsyncGenerator
+from typing import Any
 
-from .base_adapter import BaseLLMAdapter
+from ..core.exceptions import APIRequestError, ConfigurationError, LLMIntegrationError
 from ..core.models import (
-    Message,
+    ChatCompletionChoice,
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
-    ChatCompletionChoice,
     ChoiceDelta,
-    ChatCompletionChunkChoice,
+    Message,
     Usage,
 )
-from ..core.exceptions import APIRequestError, LLMIntegrationError, ConfigurationError
 from ..utils.api_client import (
     APIClient,
 )  # Assuming APIClient is synchronous for now, or make this adapter async
 from ..utils.config_loader import app_config
+from .base_adapter import BaseLLMAdapter
 
 # To use the async APIClient
 # from ..utils.api_client import get_openai_client, APIClient as AsyncAPIClient
@@ -38,7 +39,7 @@ class OpenAIAdapter(BaseLLMAdapter):
 
     def convert_to_provider_request(
         self, request: ChatCompletionRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Converts a generic ChatCompletionRequest to an OpenAI-specific request payload."""
         provider_messages = []
         for msg in request.messages:

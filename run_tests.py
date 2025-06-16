@@ -7,10 +7,9 @@ Supports different test modes: unit, integration, all-safe, and real-api.
 import argparse
 import subprocess
 import sys
-from typing import List
 
 
-def run_command(cmd: List[str]) -> int:
+def run_command(cmd: list[str]) -> int:
     """Run a command and return its exit code."""
     print(f"Running: {' '.join(cmd)}")
     result = subprocess.run(cmd)
@@ -63,12 +62,10 @@ def main():
         "--mode",
         choices=["unit", "integration", "all-safe", "real-api", "all"],
         default="all-safe",
-        help="Test mode to run"
+        help="Test mode to run",
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose output"
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
     )
 
     args = parser.parse_args()
@@ -91,4 +88,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

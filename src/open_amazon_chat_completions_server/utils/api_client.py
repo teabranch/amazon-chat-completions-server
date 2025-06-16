@@ -1,31 +1,32 @@
-import logging
-import json
 import asyncio
-from typing import Any, Dict, AsyncGenerator, Optional, Union
+import json
+import logging
+from collections.abc import AsyncGenerator
+from typing import Any
 
-import openai
 import boto3
 import botocore.config
 import botocore.exceptions
+import openai
 from botocore.exceptions import ClientError
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
 
-from .config_loader import app_config
 from ..core.exceptions import (
     APIConnectionError,
     APIRequestError,
-    AuthenticationError,
-    RateLimitError,
     APIServerError,
-    LLMIntegrationError,
+    AuthenticationError,
     ConfigurationError,
+    LLMIntegrationError,
+    RateLimitError,
     StreamingError,
 )
+from .config_loader import app_config
 
 logger = logging.getLogger(__name__)
 
@@ -116,8 +117,8 @@ class APIClient:
     """Handles making API calls with retry logic and error mapping."""
 
     def __init__(self):
-        self.openai_client: Optional[openai.AsyncOpenAI] = None
-        self.bedrock_runtime_client: Optional[Any] = (
+        self.openai_client: openai.AsyncOpenAI | None = None
+        self.bedrock_runtime_client: Any | None = (
             None  # boto3 client, type hinted as Any for simplicity
         )
         self.app_config = app_config  # Use the global app_config instance
@@ -153,7 +154,12 @@ class APIClient:
                     "or shared AWS config. Bedrock calls may fail if region is not discoverable."
                 )
 
-            if not (static_keys_present or profile_name_present or role_arn_present or web_identity_present):
+            if not (
+                static_keys_present
+                or profile_name_present
+                or role_arn_present
+                or web_identity_present
+            ):
                 # This check is important because Boto3 can sometimes pick up credentials from other sources
                 # (e.g. EC2 instance profile, ECS task role). We want to be explicit if no config is provided via .env
                 logger.warning(
@@ -207,23 +213,25 @@ class APIClient:
                     # Create a base session to assume the role
                     base_session = boto3.Session(region_name=self.app_config.AWS_REGION)
                     sts_client = base_session.client("sts")
-                    
+
                     # Prepare assume role parameters
                     assume_role_params = {
                         "RoleArn": self.app_config.AWS_ROLE_ARN,
                         "RoleSessionName": self.app_config.AWS_ROLE_SESSION_NAME,
                         "DurationSeconds": self.app_config.AWS_ROLE_SESSION_DURATION,
                     }
-                    
+
                     # Add external ID if provided
                     if self.app_config.AWS_EXTERNAL_ID:
-                        assume_role_params["ExternalId"] = self.app_config.AWS_EXTERNAL_ID
+                        assume_role_params["ExternalId"] = (
+                            self.app_config.AWS_EXTERNAL_ID
+                        )
                         logger.info("Using external ID for role assumption.")
-                    
+
                     # Assume the role
                     response = sts_client.assume_role(**assume_role_params)
                     credentials = response["Credentials"]
-                    
+
                     # Create session with assumed role credentials
                     session = boto3.Session(
                         aws_access_key_id=credentials["AccessKeyId"],
@@ -231,7 +239,7 @@ class APIClient:
                         aws_session_token=credentials["SessionToken"],
                         region_name=self.app_config.AWS_REGION,
                     )
-                    
+
                     logger.info(
                         f"Successfully assumed role '{self.app_config.AWS_ROLE_ARN}'. "
                         f"Session expires at: {credentials['Expiration']}"
@@ -254,26 +262,29 @@ class APIClient:
                     # For web identity, we rely on boto3's built-in support
                     # Set the environment variables that boto3 expects
                     import os
+
                     original_env = {}
-                    
+
                     # Temporarily set environment variables for boto3
                     env_vars = {
                         "AWS_WEB_IDENTITY_TOKEN_FILE": self.app_config.AWS_WEB_IDENTITY_TOKEN_FILE,
                         "AWS_ROLE_ARN": self.app_config.AWS_ROLE_ARN or "",
                         "AWS_ROLE_SESSION_NAME": self.app_config.AWS_ROLE_SESSION_NAME,
                     }
-                    
+
                     for key, value in env_vars.items():
                         if value:
                             original_env[key] = os.environ.get(key)
                             os.environ[key] = value
-                    
+
                     try:
                         session = boto3.Session(region_name=self.app_config.AWS_REGION)
                         # Test the session
                         sts_client = session.client("sts")
                         sts_client.get_caller_identity()
-                        logger.info("Successfully initialized session with web identity token.")
+                        logger.info(
+                            "Successfully initialized session with web identity token."
+                        )
                     finally:
                         # Restore original environment
                         for key in env_vars:
@@ -281,7 +292,7 @@ class APIClient:
                                 os.environ[key] = original_env[key]
                             elif key in os.environ:
                                 del os.environ[key]
-                                
+
                 except Exception as e:
                     logger.error(
                         f"Failed to initialize session with web identity token. Error: {e}. "
@@ -322,11 +333,11 @@ class APIClient:
 
     @retry(**retry_config)
     async def make_openai_chat_completion_request(
-        self, request_payload: Dict[str, Any], stream: bool = False
-    ) -> Union[
-        openai.types.chat.ChatCompletion,
-        AsyncGenerator[openai.types.chat.ChatCompletionChunk, None],
-    ]:
+        self, request_payload: dict[str, Any], stream: bool = False
+    ) -> (
+        openai.types.chat.ChatCompletion
+        | AsyncGenerator[openai.types.chat.ChatCompletionChunk, None]
+    ):
         """Makes a request to OpenAI Chat Completions API."""
         client = self.get_openai_client()
 
@@ -369,8 +380,8 @@ class APIClient:
 
     @retry(**retry_config)
     async def make_bedrock_request(
-        self, model_id: str, body: Dict[str, Any], stream: bool = False
-    ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
+        self, model_id: str, body: dict[str, Any], stream: bool = False
+    ) -> dict[str, Any] | AsyncGenerator[dict[str, Any], None]:
         """Makes a request to AWS Bedrock, handling streaming if specified."""
 
         # Ensure client is initialized (which also checks credentials/profile)
@@ -449,7 +460,7 @@ class APIClient:
 
     async def _handle_bedrock_stream(
         self, event_stream: Any
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """Helper to process Bedrock's event stream."""
         if not event_stream:
             logger.warning("Bedrock stream event_stream is None.")

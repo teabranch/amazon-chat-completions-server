@@ -1,20 +1,20 @@
 import logging
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
+from ...core.exceptions import APIRequestError, UnsupportedFeatureError
 from ...core.models import (
-    Message,
+    ChatCompletionChoice,
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
-    ChatCompletionChoice,
     ChoiceDelta,
-    ChatCompletionChunkChoice,
+    Message,
     Usage,
 )
-from ...core.exceptions import APIRequestError, UnsupportedFeatureError
+from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +27,11 @@ class CohereStrategy(BedrockAdapterStrategy):
         logger.info(f"CohereStrategy initialized for model: {self.model_id}")
 
     def _format_messages_to_cohere_prompt(
-        self, messages: List[Message], system_prompt: Optional[str]
+        self, messages: list[Message], system_prompt: str | None
     ) -> str:
         """Formats messages into Cohere's expected prompt format."""
         formatted_parts = []
-        
+
         if system_prompt:
             formatted_parts.append(f"System: {system_prompt}")
 
@@ -55,8 +55,8 @@ class CohereStrategy(BedrockAdapterStrategy):
         return "\n\n".join(formatted_parts)
 
     def prepare_request_payload(
-        self, request: ChatCompletionRequest, adapter_config_kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request: ChatCompletionRequest, adapter_config_kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         if request.tools or request.tool_choice:
             raise UnsupportedFeatureError(
                 "Cohere Command models do not support OpenAI-style 'tools' or 'tool_choice' parameters."
@@ -65,7 +65,9 @@ class CohereStrategy(BedrockAdapterStrategy):
         system_prompt, processed_messages = self._extract_system_prompt_and_messages(
             request.messages
         )
-        prompt = self._format_messages_to_cohere_prompt(processed_messages, system_prompt)
+        prompt = self._format_messages_to_cohere_prompt(
+            processed_messages, system_prompt
+        )
 
         # Cohere Command parameters
         max_tokens = (
@@ -73,7 +75,7 @@ class CohereStrategy(BedrockAdapterStrategy):
             if request.max_tokens is not None
             else self._get_default_param("max_tokens", default_value=2048)
         )
-        
+
         temperature = (
             request.temperature
             if request.temperature is not None
@@ -92,14 +94,17 @@ class CohereStrategy(BedrockAdapterStrategy):
             "top_k": "k",  # Cohere uses 'k' instead of 'top_k'
             "stop_sequences": "stop_sequences",
         }
-        
+
         for generic_param, cohere_param in cohere_params.items():
             value = None
-            if hasattr(request, generic_param) and getattr(request, generic_param) is not None:
+            if (
+                hasattr(request, generic_param)
+                and getattr(request, generic_param) is not None
+            ):
                 value = getattr(request, generic_param)
             elif generic_param in adapter_config_kwargs:
                 value = adapter_config_kwargs[generic_param]
-            
+
             if value is not None:
                 payload[cohere_param] = value
 
@@ -107,7 +112,7 @@ class CohereStrategy(BedrockAdapterStrategy):
         return payload
 
     def parse_response(
-        self, provider_response: Dict[str, Any], original_request: ChatCompletionRequest
+        self, provider_response: dict[str, Any], original_request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         # Cohere response structure: {"generations": [{"text": "...", "finish_reason": "..."}]}
         generations = provider_response.get("generations", [])
@@ -127,8 +132,16 @@ class CohereStrategy(BedrockAdapterStrategy):
         )
 
         # Cohere token usage
-        prompt_tokens = provider_response.get("meta", {}).get("billed_units", {}).get("input_tokens", 0)
-        completion_tokens = provider_response.get("meta", {}).get("billed_units", {}).get("output_tokens", 0)
+        prompt_tokens = (
+            provider_response.get("meta", {})
+            .get("billed_units", {})
+            .get("input_tokens", 0)
+        )
+        completion_tokens = (
+            provider_response.get("meta", {})
+            .get("billed_units", {})
+            .get("output_tokens", 0)
+        )
         total_tokens = prompt_tokens + completion_tokens
 
         return ChatCompletionResponse(
@@ -147,7 +160,7 @@ class CohereStrategy(BedrockAdapterStrategy):
 
     async def handle_stream_chunk(
         self,
-        chunk_data: Dict[str, Any],
+        chunk_data: dict[str, Any],
         original_request: ChatCompletionRequest,
         response_id: str,
         created_timestamp: int,
@@ -155,10 +168,10 @@ class CohereStrategy(BedrockAdapterStrategy):
         # Cohere streaming format
         delta_content = None
         finish_reason = None
-        
+
         if "text" in chunk_data:
             delta_content = chunk_data["text"]
-        
+
         if "finish_reason" in chunk_data:
             finish_reason = self._map_finish_reason(chunk_data["finish_reason"])
 
@@ -189,4 +202,4 @@ class CohereStrategy(BedrockAdapterStrategy):
             "ERROR": "stop",
             "ERROR_TOXIC": "content_filter",
         }
-        return mapping.get(provider_reason.upper(), provider_reason) 
+        return mapping.get(provider_reason.upper(), provider_reason)

@@ -1,17 +1,18 @@
-import click
-import uvicorn
-import requests
-import json
 import asyncio
-from rich.console import Console
-from rich.prompt import Prompt, InvalidResponse
-from rich.table import Table
+import json
 import os  # For path operations
-from dotenv import load_dotenv, dotenv_values, set_key  # For .env file management
 
-from .formatters import ChatFormatter
-from .error_handling import CLIErrorHandler, make_api_request
+import click
+import requests
+import uvicorn
+from dotenv import dotenv_values, load_dotenv, set_key  # For .env file management
+from rich.console import Console
+from rich.prompt import InvalidResponse, Prompt
+from rich.table import Table
+
 from .chat_history import ChatHistoryManager, ChatSession
+from .error_handling import CLIErrorHandler, make_api_request
+from .formatters import ChatFormatter
 
 # --- Configuration for .env file ---
 # By default, store .env in the project's root directory.
@@ -141,7 +142,7 @@ def configure_set_command(key=None, value=None):
         if not os.path.exists(DOTENV_PATH):
             try:
                 open(DOTENV_PATH, "a").close()
-            except IOError as e:
+            except OSError as e:
                 console.print(
                     f"[bold red]Error:[/bold red] Could not create .env file at {DOTENV_PATH}. {e}",
                     style="bold red",
@@ -194,7 +195,7 @@ def configure_set_command(key=None, value=None):
         try:
             open(DOTENV_PATH, "a").close()
             console.print(f"Created .env file at {DOTENV_PATH}", style="italic green")
-        except IOError as e:
+        except OSError as e:
             console.print(
                 f"[bold red]Error:[/bold red] Could not create .env file at {DOTENV_PATH}. {e}",
                 style="bold red",
@@ -433,7 +434,7 @@ def export_history(session_id: str, output: str):
         console.print(f"Session exported to: {output}", style="green")
     except ValueError as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
-    except IOError as e:
+    except OSError as e:
         console.print(f"[bold red]Error writing file:[/bold red] {str(e)}")
 
 
@@ -524,17 +525,20 @@ async def _async_chat(
     async def stream_response(server_url: str, payload: dict, headers: dict):
         try:
             import httpx
+
             async with httpx.AsyncClient() as client:
                 async with client.stream(
                     "POST",
                     f"{server_url}/v1/chat/completions",
                     json=payload,
-                    headers=headers
+                    headers=headers,
                 ) as response:
                     if response.status_code != 200:
-                        console.print(f"\n[bold red]HTTP Error:[/bold red] {response.status_code} - {response.text}")
+                        console.print(
+                            f"\n[bold red]HTTP Error:[/bold red] {response.status_code} - {response.text}"
+                        )
                         return None
-                    
+
                     console.print("[b green]Assistant[/b green]: ", end="")
                     response_content = ""
                     async for chunk in response.aiter_text():
@@ -545,9 +549,15 @@ async def _async_chat(
                                 if json_data and json_data != "[DONE]":
                                     try:
                                         chunk_data = json.loads(json_data)
-                                        if chunk_data.get("choices") and chunk_data["choices"][0].get("delta", {}).get("content"):
-                                            content = chunk_data["choices"][0]["delta"]["content"]
-                                            formatter.print_streaming_content(content, end="")
+                                        if chunk_data.get("choices") and chunk_data[
+                                            "choices"
+                                        ][0].get("delta", {}).get("content"):
+                                            content = chunk_data["choices"][0]["delta"][
+                                                "content"
+                                            ]
+                                            formatter.print_streaming_content(
+                                                content, end=""
+                                            )
                                             response_content += content
                                     except json.JSONDecodeError:
                                         pass  # Skip invalid JSON chunks
@@ -572,7 +582,10 @@ async def _async_chat(
                 "stream": stream,
             }
 
-            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
 
             if stream:
                 response_content = await stream_response(server_url, payload, headers)
@@ -725,6 +738,319 @@ def list_models_command(server_url: str, api_key: str):
         console.print(
             "[bold red]Error[/bold red]: Could not decode JSON response from server."
         )
+
+
+@cli.group("kb")
+def kb_group():
+    """Manage Bedrock Knowledge Bases."""
+    pass
+
+
+@kb_group.command("list")
+@click.option(
+    "--server-url",
+    default=lambda: os.getenv("CHAT_SERVER_URL", "http://localhost:8000"),
+    help="URL of the chat completions server.",
+    show_default=True,
+)
+@click.option(
+    "--api-key",
+    default=lambda: os.getenv("CHAT_API_KEY", EXPECTED_SERVER_API_KEY),
+    help="API key for the server.",
+    show_default=True,
+)
+@click.option(
+    "--max-results", default=10, type=int, help="Maximum number of results to return"
+)
+def list_knowledge_bases(server_url: str, api_key: str, max_results: int):
+    """List available knowledge bases."""
+    console = Console()
+
+    try:
+        url = f"{server_url.rstrip('/')}/v1/knowledge-bases"
+        headers = {"Authorization": f"Bearer {api_key}"}
+        params = {"max_results": max_results}
+
+        response = make_api_request("GET", url, headers=headers, params=params)
+
+        if not response.get("knowledgeBaseSummaries"):
+            console.print("No knowledge bases found.", style="yellow")
+            return
+
+        table = Table(title="Knowledge Bases")
+        table.add_column("ID", style="cyan", no_wrap=True)
+        table.add_column("Name", style="green")
+        table.add_column("Status", style="yellow")
+        table.add_column("Created", style="blue")
+
+        for kb in response["knowledgeBaseSummaries"]:
+            table.add_row(
+                kb.get("knowledgeBaseId", "N/A"),
+                kb.get("name", "N/A"),
+                kb.get("status", "N/A"),
+                kb.get("updatedAt", "N/A")[:10]
+                if kb.get("updatedAt")
+                else "N/A",  # Just the date part
+            )
+
+        console.print(table)
+
+    except Exception as e:
+        CLIErrorHandler.handle_error(e, console)
+
+
+@kb_group.command("get")
+@click.argument("knowledge_base_id")
+@click.option(
+    "--server-url",
+    default=lambda: os.getenv("CHAT_SERVER_URL", "http://localhost:8000"),
+    help="URL of the chat completions server.",
+    show_default=True,
+)
+@click.option(
+    "--api-key",
+    default=lambda: os.getenv("CHAT_API_KEY", EXPECTED_SERVER_API_KEY),
+    help="API key for the server.",
+    show_default=True,
+)
+def get_knowledge_base(knowledge_base_id: str, server_url: str, api_key: str):
+    """Get details of a specific knowledge base."""
+    console = Console()
+
+    try:
+        url = f"{server_url.rstrip('/')}/v1/knowledge-bases/{knowledge_base_id}"
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        response = make_api_request("GET", url, headers=headers)
+
+        console.print("[bold green]Knowledge Base Details[/bold green]")
+        console.print(f"ID: {response.get('knowledgeBaseId', 'N/A')}")
+        console.print(f"Name: {response.get('name', 'N/A')}")
+        console.print(f"Description: {response.get('description', 'N/A')}")
+        console.print(f"Status: {response.get('status', 'N/A')}")
+        console.print(f"ARN: {response.get('knowledgeBaseArn', 'N/A')}")
+        console.print(f"Role ARN: {response.get('roleArn', 'N/A')}")
+        console.print(f"Created: {response.get('createdAt', 'N/A')}")
+        console.print(f"Updated: {response.get('updatedAt', 'N/A')}")
+
+        if response.get("failureReasons"):
+            console.print("[bold red]Failure Reasons:[/bold red]")
+            for reason in response["failureReasons"]:
+                console.print(f"  - {reason}")
+
+    except Exception as e:
+        CLIErrorHandler.handle_error(e, console)
+
+
+@kb_group.command("query")
+@click.argument("knowledge_base_id")
+@click.argument("query")
+@click.option(
+    "--server-url",
+    default=lambda: os.getenv("CHAT_SERVER_URL", "http://localhost:8000"),
+    help="URL of the chat completions server.",
+    show_default=True,
+)
+@click.option(
+    "--api-key",
+    default=lambda: os.getenv("CHAT_API_KEY", EXPECTED_SERVER_API_KEY),
+    help="API key for the server.",
+    show_default=True,
+)
+@click.option(
+    "--max-results", default=5, type=int, help="Maximum number of results to return"
+)
+def query_knowledge_base(
+    knowledge_base_id: str, query: str, server_url: str, api_key: str, max_results: int
+):
+    """Query a knowledge base directly (retrieve-only)."""
+    console = Console()
+
+    try:
+        url = f"{server_url.rstrip('/')}/v1/knowledge-bases/{knowledge_base_id}/query"
+        headers = {"Authorization": f"Bearer {api_key}"}
+        params = {"query": query, "max_results": max_results}
+
+        response = make_api_request("POST", url, headers=headers, params=params)
+
+        if not response.get("retrievalResults"):
+            console.print("No results found for your query.", style="yellow")
+            return
+
+        console.print(f"[bold green]Query Results for:[/bold green] {query}")
+        console.print()
+
+        for i, result in enumerate(response["retrievalResults"], 1):
+            console.print(f"[bold cyan]Result {i}[/bold cyan]")
+            console.print(f"Content: {result.get('content', 'N/A')}")
+
+            if result.get("score"):
+                console.print(f"Relevance Score: {result['score']:.3f}")
+
+            if result.get("metadata"):
+                console.print(f"Metadata: {json.dumps(result['metadata'], indent=2)}")
+
+            console.print("-" * 50)
+
+    except Exception as e:
+        CLIErrorHandler.handle_error(e, console)
+
+
+@kb_group.command("chat")
+@click.argument("knowledge_base_id")
+@click.option(
+    "--model",
+    default="anthropic.claude-3-5-haiku-20241022-v1:0",
+    help="Model to use for generation.",
+)
+@click.option(
+    "--server-url",
+    default=lambda: os.getenv("CHAT_SERVER_URL", "http://localhost:8000"),
+    help="URL of the chat completions server.",
+    show_default=True,
+)
+@click.option(
+    "--api-key",
+    default=lambda: os.getenv("CHAT_API_KEY", EXPECTED_SERVER_API_KEY),
+    help="API key for the server.",
+    show_default=True,
+)
+@click.option("--session", help="Continue an existing chat session")
+@click.option("--session-name", help="Name for the new chat session")
+def kb_chat(
+    knowledge_base_id: str,
+    model: str,
+    server_url: str,
+    api_key: str,
+    session: str,
+    session_name: str,
+):
+    """Start an interactive chat with a knowledge base (RAG-enhanced)."""
+    asyncio.run(
+        _async_kb_chat(
+            knowledge_base_id, model, server_url, api_key, session, session_name
+        )
+    )
+
+
+async def _async_kb_chat(
+    knowledge_base_id: str,
+    model: str,
+    server_url: str,
+    api_key: str,
+    session: str,
+    session_name: str,
+):
+    """Async implementation of knowledge base chat."""
+    console = Console()
+    history_manager = ChatHistoryManager()
+    error_handler = CLIErrorHandler()
+
+    # Load or create session
+    if session:
+        try:
+            chat_session = history_manager.load_session(session)
+            console.print(
+                f"Continuing session: {chat_session.name} (ID: {session})",
+                style="green",
+            )
+        except FileNotFoundError:
+            console.print(
+                f"Session {session} not found. Creating new session.", style="yellow"
+            )
+            chat_session = ChatSession(
+                name=session_name or f"KB Chat {knowledge_base_id}"
+            )
+    else:
+        chat_session = ChatSession(name=session_name or f"KB Chat {knowledge_base_id}")
+
+    console.print("[bold green]Knowledge Base Chat[/bold green]")
+    console.print(f"Knowledge Base ID: {knowledge_base_id}")
+    console.print(f"Model: {model}")
+    console.print(f"Session: {chat_session.name} (ID: {chat_session.id})")
+    console.print("Type 'exit' or 'quit' to end the conversation.")
+    console.print()
+
+    # Print conversation history if continuing a session
+    if chat_session.messages:
+        console.print("[bold yellow]Conversation History:[/bold yellow]")
+        for msg in chat_session.messages:
+            if msg["role"] == "user":
+                console.print(f"[bold blue]You:[/bold blue] {msg['content']}")
+            elif msg["role"] == "assistant":
+                console.print(f"[bold green]Assistant:[/bold green] {msg['content']}")
+        console.print()
+
+    try:
+        while True:
+            user_input = Prompt.ask("[bold blue]You[/bold blue]").strip()
+
+            if user_input.lower() in ["exit", "quit"]:
+                break
+
+            if not user_input:
+                continue
+
+            # Add user message to session
+            chat_session.add_message("user", user_input)
+
+            # Prepare request payload
+            payload = {
+                "model": model,
+                "messages": chat_session.messages,
+                "knowledge_base_id": knowledge_base_id,
+                "auto_kb": True,
+                "stream": False,
+                "citation_format": "openai",
+            }
+
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+
+            try:
+                url = f"{server_url.rstrip('/')}/v1/chat/completions"
+                response = make_api_request("POST", url, headers=headers, json=payload)
+
+                if response.get("choices") and len(response["choices"]) > 0:
+                    assistant_message = response["choices"][0]["message"]["content"]
+
+                    # Display assistant response
+                    console.print(
+                        f"[bold green]Assistant:[/bold green] {assistant_message}"
+                    )
+
+                    # Show KB metadata if available
+                    if response.get("kb_metadata", {}).get("knowledge_base_used"):
+                        metadata = response["kb_metadata"]
+                        console.print(
+                            f"[dim]✓ Knowledge base used • {metadata.get('citations_count', 0)} citations[/dim]"
+                        )
+
+                    console.print()
+
+                    # Add assistant message to session
+                    chat_session.add_message("assistant", assistant_message)
+
+                    # Save session
+                    history_manager.save_session(chat_session)
+                else:
+                    console.print(
+                        "[bold red]No response received from server[/bold red]"
+                    )
+
+            except Exception as e:
+                error_handler.handle_error(e, console)
+                continue
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Chat interrupted by user[/yellow]")
+
+    finally:
+        # Save session before exit
+        history_manager.save_session(chat_session)
+        console.print(f"Session saved as: {chat_session.id}")
 
 
 if __name__ == "__main__":

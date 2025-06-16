@@ -1,9 +1,8 @@
-from dataclasses import dataclass
-from datetime import datetime
 import json
 import os
-from typing import List, Dict, Optional
 import uuid
+from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass
@@ -12,13 +11,13 @@ class ChatSession:
 
     id: str
     model: str
-    messages: List[Dict]
+    messages: list[dict]
     created_at: datetime
     updated_at: datetime
-    name: Optional[str] = None
+    name: str | None = None
 
     @classmethod
-    def create_new(cls, model: str, name: Optional[str] = None) -> "ChatSession":
+    def create_new(cls, model: str, name: str | None = None) -> "ChatSession":
         """Create a new chat session."""
         now = datetime.now()
         return cls(
@@ -30,7 +29,7 @@ class ChatSession:
             name=name,
         )
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert the session to a dictionary for serialization."""
         return {
             "id": self.id,
@@ -42,7 +41,7 @@ class ChatSession:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> "ChatSession":
+    def from_dict(cls, data: dict) -> "ChatSession":
         """Create a session from a dictionary."""
         return cls(
             id=data["id"],
@@ -79,7 +78,7 @@ class ChatHistoryManager:
         except FileNotFoundError:
             raise ValueError(f"Chat session {session_id} not found")
 
-    def list_sessions(self) -> List[ChatSession]:
+    def list_sessions(self) -> list[ChatSession]:
         """List all available chat sessions."""
         sessions = []
         for filename in os.listdir(self.storage_dir):

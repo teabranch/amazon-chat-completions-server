@@ -1,38 +1,42 @@
+import logging
 import os
-from typing import List, AsyncGenerator, Optional, Union
-from openai import AsyncOpenAI, APIError, AuthenticationError, NotFoundError
+from collections.abc import AsyncGenerator
 
+from openai import APIError, AsyncOpenAI, AuthenticationError, NotFoundError
+
+# Import custom exceptions (assuming they would be defined in core.exceptions)
+from src.open_amazon_chat_completions_server.core.exceptions import (
+    ConfigurationError,
+    ServiceApiError,
+    ServiceAuthenticationError,
+    ServiceModelNotFoundError,
+    ServiceUnavailableError,
+)
 from src.open_amazon_chat_completions_server.core.models import (
-    Message,
-    ChatCompletionResponse,
-    ChatCompletionChunk,
-    ModelProviderInfo,
-    ChoiceDelta,
-    ChatCompletionChunkChoice,
     ChatCompletionChoice as CoreChatCompletionChoice,  # Renaming to avoid conflict if OpenAI's Choice is used
-    Usage as CoreUsage,  # Import our Usage model
+)
+from src.open_amazon_chat_completions_server.core.models import (
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
     ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChoiceDelta,
+    Message,
+    ModelProviderInfo,
+)
+from src.open_amazon_chat_completions_server.core.models import (
+    Usage as CoreUsage,  # Import our Usage model
 )
 
 # Use AbstractLLMService from the existing module
 from .llm_service_abc import AbstractLLMService
-
-# Import custom exceptions (assuming they would be defined in core.exceptions)
-from src.open_amazon_chat_completions_server.core.exceptions import (
-    ServiceAuthenticationError,
-    ServiceApiError,
-    ServiceUnavailableError,
-    ConfigurationError,
-    ServiceModelNotFoundError,
-)
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class OpenAIService(AbstractLLMService):
     def __init__(
-        self, api_key: Optional[str] = None, **kwargs
+        self, api_key: str | None = None, **kwargs
     ):  # Added **kwargs to match factory
         # kwargs might be used for other settings like base_url, timeout, etc.
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -190,13 +194,13 @@ class OpenAIService(AbstractLLMService):
 
     async def chat_completion(
         self,
-        messages: List[Message],
-        model_id: Optional[str] = None,
+        messages: list[Message],
+        model_id: str | None = None,
         stream: bool = False,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs,
-    ) -> Union[ChatCompletionResponse, AsyncGenerator[ChatCompletionChunk, None]]:
+    ) -> ChatCompletionResponse | AsyncGenerator[ChatCompletionChunk, None]:
         # Handle the standard interface (messages list)
         if not model_id:
             logger.error("Model ID is required for OpenAI chat completion.")
@@ -228,7 +232,7 @@ class OpenAIService(AbstractLLMService):
     async def chat_completion_with_request(
         self,
         request: ChatCompletionRequest,
-    ) -> Union[ChatCompletionResponse, AsyncGenerator[ChatCompletionChunk, None]]:
+    ) -> ChatCompletionResponse | AsyncGenerator[ChatCompletionChunk, None]:
         """
         Handle chat completion with a ChatCompletionRequest DTO.
         This method is used by the API routes.
@@ -238,17 +242,17 @@ class OpenAIService(AbstractLLMService):
             kwargs["tools"] = request.tools
         if request.tool_choice:
             kwargs["tool_choice"] = request.tool_choice
-            
+
         return await self.chat_completion(
             messages=request.messages,
             model_id=request.model,
             stream=request.stream or False,
             temperature=request.temperature,
             max_tokens=request.max_tokens,
-            **kwargs
+            **kwargs,
         )
 
-    async def list_models(self) -> List[ModelProviderInfo]:
+    async def list_models(self) -> list[ModelProviderInfo]:
         logger.info("OpenAIService: Fetching models from OpenAI")
         try:
             models_response = await self.client.models.list()

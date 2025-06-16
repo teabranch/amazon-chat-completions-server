@@ -1,25 +1,26 @@
 import logging
-from typing import Union, AsyncGenerator, List, Dict, Any
+from collections.abc import AsyncGenerator
+from typing import Any
 
-from .base_adapter import BaseLLMAdapter
-from .openai_adapter import OpenAIAdapter
 from ..core.bedrock_models import (
     BedrockClaudeRequest,
-    BedrockTitanRequest,
-    BedrockContentBlock,
-    BedrockToolChoice,
     BedrockClaudeResponse,
-    BedrockTitanResponse,
     BedrockClaudeStreamChunk,
+    BedrockContentBlock,
+    BedrockTitanRequest,
+    BedrockTitanResponse,
     BedrockTitanStreamChunk,
-)
-from ..core.models import (
-    ChatCompletionRequest,
-    ChatCompletionResponse,
-    ChatCompletionChunk,
-    Message,
+    BedrockToolChoice,
 )
 from ..core.exceptions import LLMIntegrationError
+from ..core.models import (
+    ChatCompletionChunk,
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    Message,
+)
+from .base_adapter import BaseLLMAdapter
+from .openai_adapter import OpenAIAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class BedrockToOpenAIAdapter(BaseLLMAdapter):
         )
 
     def convert_bedrock_to_openai_request(
-        self, bedrock_request: Union[BedrockClaudeRequest, BedrockTitanRequest]
+        self, bedrock_request: BedrockClaudeRequest | BedrockTitanRequest
     ) -> ChatCompletionRequest:
         """Convert Bedrock format request to OpenAI format"""
         if isinstance(bedrock_request, BedrockClaudeRequest):
@@ -119,8 +120,8 @@ class BedrockToOpenAIAdapter(BaseLLMAdapter):
         )
 
     def _convert_bedrock_content_to_openai(
-        self, content: Union[str, List[BedrockContentBlock]]
-    ) -> Union[str, List[Dict[str, Any]]]:
+        self, content: str | list[BedrockContentBlock]
+    ) -> str | list[dict[str, Any]]:
         """Convert Bedrock content blocks to OpenAI format"""
         if isinstance(content, str):
             return content
@@ -141,7 +142,7 @@ class BedrockToOpenAIAdapter(BaseLLMAdapter):
 
     def convert_openai_to_bedrock_response(
         self, openai_response: ChatCompletionResponse, original_format: str
-    ) -> Union[BedrockClaudeResponse, BedrockTitanResponse]:
+    ) -> BedrockClaudeResponse | BedrockTitanResponse:
         """Convert OpenAI response back to Bedrock format"""
         if original_format.lower() == "claude":
             return self._convert_openai_to_claude_response(openai_response)
@@ -262,9 +263,9 @@ class BedrockToOpenAIAdapter(BaseLLMAdapter):
     # Bedrock-specific methods
     async def chat_completion_bedrock(
         self,
-        bedrock_request: Union[BedrockClaudeRequest, BedrockTitanRequest],
+        bedrock_request: BedrockClaudeRequest | BedrockTitanRequest,
         original_format: str,
-    ) -> Union[BedrockClaudeResponse, BedrockTitanResponse]:
+    ) -> BedrockClaudeResponse | BedrockTitanResponse:
         """Process Bedrock format request and return Bedrock format response"""
         # Convert Bedrock request to OpenAI format
         openai_request = self.convert_bedrock_to_openai_request(bedrock_request)
@@ -277,9 +278,9 @@ class BedrockToOpenAIAdapter(BaseLLMAdapter):
 
     async def stream_chat_completion_bedrock(
         self,
-        bedrock_request: Union[BedrockClaudeRequest, BedrockTitanRequest],
+        bedrock_request: BedrockClaudeRequest | BedrockTitanRequest,
         original_format: str,
-    ) -> AsyncGenerator[Union[BedrockClaudeStreamChunk, BedrockTitanStreamChunk], None]:
+    ) -> AsyncGenerator[BedrockClaudeStreamChunk | BedrockTitanStreamChunk, None]:
         """Process streaming Bedrock format request and return Bedrock format chunks"""
         # Convert Bedrock request to OpenAI format
         openai_request = self.convert_bedrock_to_openai_request(bedrock_request)
@@ -297,7 +298,7 @@ class BedrockToOpenAIAdapter(BaseLLMAdapter):
 
     def _convert_openai_chunk_to_bedrock(
         self, openai_chunk: ChatCompletionChunk, original_format: str
-    ) -> Union[BedrockClaudeStreamChunk, BedrockTitanStreamChunk, None]:
+    ) -> BedrockClaudeStreamChunk | BedrockTitanStreamChunk | None:
         """Convert OpenAI streaming chunk to Bedrock format"""
         if not openai_chunk.choices:
             return None

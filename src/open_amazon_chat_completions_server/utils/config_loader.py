@@ -1,7 +1,7 @@
-import os
 import logging
+import os
+
 from dotenv import load_dotenv
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -50,29 +50,39 @@ class AppConfig:
             logger.info(f"Loaded environment variables from: {loaded_from}")
 
         # OpenAI Configuration
-        self.OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
-        self.OPENAI_ORG_ID: Optional[str] = os.getenv("OPENAI_ORG_ID")  # Optional
+        self.OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
+        self.OPENAI_ORG_ID: str | None = os.getenv("OPENAI_ORG_ID")  # Optional
 
         # AWS Bedrock Configuration
-        self.AWS_ACCESS_KEY_ID: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID")
-        self.AWS_SECRET_ACCESS_KEY: Optional[str] = os.getenv("AWS_SECRET_ACCESS_KEY")
-        self.AWS_SESSION_TOKEN: Optional[str] = os.getenv(
+        self.AWS_ACCESS_KEY_ID: str | None = os.getenv("AWS_ACCESS_KEY_ID")
+        self.AWS_SECRET_ACCESS_KEY: str | None = os.getenv("AWS_SECRET_ACCESS_KEY")
+        self.AWS_SESSION_TOKEN: str | None = os.getenv(
             "AWS_SESSION_TOKEN"
         )  # For temporary credentials
-        self.AWS_REGION: Optional[str] = os.getenv("AWS_REGION")
-        self.AWS_PROFILE: Optional[str] = os.getenv(
+        self.AWS_REGION: str | None = os.getenv("AWS_REGION")
+        self.AWS_PROFILE: str | None = os.getenv(
             "AWS_PROFILE"
         )  # New: for profile-based auth
-        
+
         # Enhanced AWS Role Support
-        self.AWS_ROLE_ARN: Optional[str] = os.getenv("AWS_ROLE_ARN")  # For assume role
-        self.AWS_EXTERNAL_ID: Optional[str] = os.getenv("AWS_EXTERNAL_ID")  # For assume role with external ID
-        self.AWS_ROLE_SESSION_NAME: Optional[str] = os.getenv("AWS_ROLE_SESSION_NAME", "amazon-chat-completions-session")  # Session name for assume role
-        self.AWS_WEB_IDENTITY_TOKEN_FILE: Optional[str] = os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE")  # For OIDC/web identity
-        self.AWS_ROLE_SESSION_DURATION: int = int(os.getenv("AWS_ROLE_SESSION_DURATION", "3600"))  # Session duration in seconds
+        self.AWS_ROLE_ARN: str | None = os.getenv("AWS_ROLE_ARN")  # For assume role
+        self.AWS_EXTERNAL_ID: str | None = os.getenv(
+            "AWS_EXTERNAL_ID"
+        )  # For assume role with external ID
+        self.AWS_ROLE_SESSION_NAME: str | None = os.getenv(
+            "AWS_ROLE_SESSION_NAME", "amazon-chat-completions-session"
+        )  # Session name for assume role
+        self.AWS_WEB_IDENTITY_TOKEN_FILE: str | None = os.getenv(
+            "AWS_WEB_IDENTITY_TOKEN_FILE"
+        )  # For OIDC/web identity
+        self.AWS_ROLE_SESSION_DURATION: int = int(
+            os.getenv("AWS_ROLE_SESSION_DURATION", "3600")
+        )  # Session duration in seconds
 
         # S3 Configuration for File Storage
-        self.S3_FILES_BUCKET: Optional[str] = os.getenv("S3_FILES_BUCKET")  # S3 bucket for file uploads
+        self.S3_FILES_BUCKET: str | None = os.getenv(
+            "S3_FILES_BUCKET"
+        )  # S3 bucket for file uploads
 
         # Application Configuration
         self.LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -170,13 +180,28 @@ class AppConfig:
         aws_role_arn_present = bool(self.AWS_ROLE_ARN)
         aws_web_identity_present = bool(self.AWS_WEB_IDENTITY_TOKEN_FILE)
 
-        if not (aws_static_keys_present or aws_profile_present or aws_role_arn_present or aws_web_identity_present):
+        if not (
+            aws_static_keys_present
+            or aws_profile_present
+            or aws_role_arn_present
+            or aws_web_identity_present
+        ):
             logger.warning(
                 "No AWS authentication method configured (static credentials, profile, role ARN, or web identity). "
                 "AWS Bedrock functionalities will be unavailable unless the environment is configured for "
                 "IAM role instance profile, ECS task role, or other implicit authentication."
             )
-        elif sum([bool(aws_static_keys_present), bool(aws_profile_present), bool(aws_role_arn_present), bool(aws_web_identity_present)]) > 1:
+        elif (
+            sum(
+                [
+                    bool(aws_static_keys_present),
+                    bool(aws_profile_present),
+                    bool(aws_role_arn_present),
+                    bool(aws_web_identity_present),
+                ]
+            )
+            > 1
+        ):
             logger.info(
                 "Multiple AWS authentication methods are configured. "
                 "Priority order: static credentials > profile > role ARN > web identity > default boto3 chain."
@@ -187,7 +212,12 @@ class AppConfig:
                 "AWS_ROLE_ARN is set but AWS_REGION is not. Role assumption may fail without a region."
             )
 
-        if (aws_static_keys_present or aws_profile_present or aws_role_arn_present or aws_web_identity_present) and not self.AWS_REGION:
+        if (
+            aws_static_keys_present
+            or aws_profile_present
+            or aws_role_arn_present
+            or aws_web_identity_present
+        ) and not self.AWS_REGION:
             logger.warning(
                 "AWS credentials/profile/role are set, but AWS_REGION is not. Bedrock calls may fail or use default region."
             )
@@ -200,7 +230,10 @@ class AppConfig:
 
         # If neither OpenAI nor AWS is configured for any use:
         if not self.OPENAI_API_KEY and not (
-            aws_static_keys_present or aws_profile_present or aws_role_arn_present or aws_web_identity_present
+            aws_static_keys_present
+            or aws_profile_present
+            or aws_role_arn_present
+            or aws_web_identity_present
         ):
             logger.error(
                 "CRITICAL: No API keys or AWS configuration found for either OpenAI or AWS Bedrock. "

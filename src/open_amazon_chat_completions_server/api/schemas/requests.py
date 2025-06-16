@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
 
 
 class Message(BaseModel):
@@ -9,11 +8,13 @@ class Message(BaseModel):
 
 class ChatCompletionRequest(BaseModel):
     model: str
-    messages: List[Message] = Field(..., min_length=1)
+    messages: list[Message] = Field(..., min_length=1)
     stream: bool = False
-    max_tokens: Optional[int] = None
-    temperature: Optional[float] = 0.7
-    file_ids: Optional[List[str]] = Field(default=None, description="List of file IDs to include in the context")
+    max_tokens: int | None = None
+    temperature: float | None = 0.7
+    file_ids: list[str] | None = Field(
+        default=None, description="List of file IDs to include in the context"
+    )
 
     @field_validator("messages")
     @classmethod
@@ -31,7 +32,9 @@ class ChatCompletionRequest(BaseModel):
                 if not isinstance(file_id, str):
                     raise ValueError("file_ids must be a list of strings")
                 if not file_id.startswith("file-"):
-                    raise ValueError(f"Invalid file ID format: {file_id}. File IDs must start with 'file-'")
+                    raise ValueError(
+                        f"Invalid file ID format: {file_id}. File IDs must start with 'file-'"
+                    )
         return v
 
     # Optional: Keep this if you want to add custom validation logic beyond min_items

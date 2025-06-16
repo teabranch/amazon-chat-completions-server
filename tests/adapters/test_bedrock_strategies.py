@@ -1,15 +1,30 @@
 import pytest
+
+from src.open_amazon_chat_completions_server.adapters.bedrock.ai21_strategy import (
+    AI21Strategy,
+)
+from src.open_amazon_chat_completions_server.adapters.bedrock.cohere_strategy import (
+    CohereStrategy,
+)
+from src.open_amazon_chat_completions_server.adapters.bedrock.meta_strategy import (
+    MetaStrategy,
+)
+from src.open_amazon_chat_completions_server.adapters.bedrock.mistral_strategy import (
+    MistralStrategy,
+)
+from src.open_amazon_chat_completions_server.adapters.bedrock.nova_strategy import (
+    NovaStrategy,
+)
+from src.open_amazon_chat_completions_server.adapters.bedrock.stability_strategy import (
+    StabilityStrategy,
+)
+from src.open_amazon_chat_completions_server.adapters.bedrock.writer_strategy import (
+    WriterStrategy,
+)
 from src.open_amazon_chat_completions_server.core.models import (
     ChatCompletionRequest,
     Message,
 )
-from src.open_amazon_chat_completions_server.adapters.bedrock.ai21_strategy import AI21Strategy
-from src.open_amazon_chat_completions_server.adapters.bedrock.cohere_strategy import CohereStrategy
-from src.open_amazon_chat_completions_server.adapters.bedrock.meta_strategy import MetaStrategy
-from src.open_amazon_chat_completions_server.adapters.bedrock.mistral_strategy import MistralStrategy
-from src.open_amazon_chat_completions_server.adapters.bedrock.stability_strategy import StabilityStrategy
-from src.open_amazon_chat_completions_server.adapters.bedrock.writer_strategy import WriterStrategy
-from src.open_amazon_chat_completions_server.adapters.bedrock.nova_strategy import NovaStrategy
 
 
 class TestBedrockStrategies:
@@ -18,12 +33,14 @@ class TestBedrockStrategies:
     @pytest.fixture
     def mock_get_param_func(self):
         """Mock function for getting default parameters."""
+
         def mock_func(param_name, default_value=None):
             defaults = {
                 "max_tokens": 2048,
                 "temperature": 0.7,
             }
             return defaults.get(param_name, default_value)
+
         return mock_func
 
     @pytest.fixture
@@ -48,7 +65,7 @@ class TestBedrockStrategies:
         """Test AI21Strategy request preparation."""
         strategy = AI21Strategy("ai21.jamba-1-5-large-v1:0", mock_get_param_func)
         payload = strategy.prepare_request_payload(sample_request, {})
-        
+
         assert "prompt" in payload
         assert "maxTokens" in payload
         assert "temperature" in payload
@@ -64,7 +81,7 @@ class TestBedrockStrategies:
         """Test CohereStrategy request preparation."""
         strategy = CohereStrategy("cohere.command-text-v14", mock_get_param_func)
         payload = strategy.prepare_request_payload(sample_request, {})
-        
+
         assert "prompt" in payload
         assert "max_tokens" in payload
         assert "temperature" in payload
@@ -80,7 +97,7 @@ class TestBedrockStrategies:
         """Test MetaStrategy request preparation."""
         strategy = MetaStrategy("meta.llama2-13b-chat-v1", mock_get_param_func)
         payload = strategy.prepare_request_payload(sample_request, {})
-        
+
         assert "prompt" in payload
         assert "max_gen_len" in payload
         assert "temperature" in payload
@@ -89,14 +106,20 @@ class TestBedrockStrategies:
 
     def test_mistral_strategy_initialization(self, mock_get_param_func):
         """Test MistralStrategy initialization."""
-        strategy = MistralStrategy("mistral.mistral-large-2402-v1:0", mock_get_param_func)
+        strategy = MistralStrategy(
+            "mistral.mistral-large-2402-v1:0", mock_get_param_func
+        )
         assert strategy.model_id == "mistral.mistral-large-2402-v1:0"
 
-    def test_mistral_strategy_prepare_request(self, mock_get_param_func, sample_request):
+    def test_mistral_strategy_prepare_request(
+        self, mock_get_param_func, sample_request
+    ):
         """Test MistralStrategy request preparation."""
-        strategy = MistralStrategy("mistral.mistral-large-2402-v1:0", mock_get_param_func)
+        strategy = MistralStrategy(
+            "mistral.mistral-large-2402-v1:0", mock_get_param_func
+        )
         payload = strategy.prepare_request_payload(sample_request, {})
-        
+
         assert "prompt" in payload
         assert "max_tokens" in payload
         assert "temperature" in payload
@@ -108,11 +131,13 @@ class TestBedrockStrategies:
         strategy = StabilityStrategy("stability.sd3-5-large-v1:0", mock_get_param_func)
         assert strategy.model_id == "stability.sd3-5-large-v1:0"
 
-    def test_stability_strategy_prepare_request(self, mock_get_param_func, sample_request):
+    def test_stability_strategy_prepare_request(
+        self, mock_get_param_func, sample_request
+    ):
         """Test StabilityStrategy request preparation."""
         strategy = StabilityStrategy("stability.sd3-5-large-v1:0", mock_get_param_func)
         payload = strategy.prepare_request_payload(sample_request, {})
-        
+
         assert "prompt" in payload
         assert "max_tokens" in payload
         assert "temperature" in payload
@@ -128,7 +153,7 @@ class TestBedrockStrategies:
         """Test WriterStrategy request preparation."""
         strategy = WriterStrategy("writer.palmyra-x4-v1:0", mock_get_param_func)
         payload = strategy.prepare_request_payload(sample_request, {})
-        
+
         assert "prompt" in payload
         assert "maxTokens" in payload
         assert "temperature" in payload
@@ -144,7 +169,7 @@ class TestBedrockStrategies:
         """Test NovaStrategy request preparation."""
         strategy = NovaStrategy("amazon.nova-pro-v1:0", mock_get_param_func)
         payload = strategy.prepare_request_payload(sample_request, {})
-        
+
         assert "messages" in payload
         assert "maxTokens" in payload
         assert "temperature" in payload
@@ -156,7 +181,16 @@ class TestBedrockStrategies:
         request_with_tools = ChatCompletionRequest(
             model="test-model",
             messages=[Message(role="user", content="Hello")],
-            tools=[{"type": "function", "function": {"name": "test", "description": "test", "parameters": {}}}],
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "test",
+                        "description": "test",
+                        "parameters": {},
+                    },
+                }
+            ],
         )
 
         strategies = [
@@ -177,26 +211,71 @@ class TestBedrockStrategies:
         """Test that all strategies can parse mock responses."""
         # Mock responses for each strategy
         mock_responses = {
-            "ai21": {"completions": [{"data": {"text": "Hello!"}, "finishReason": {"reason": "stop"}}]},
-            "cohere": {"generations": [{"text": "Hello!", "finish_reason": "COMPLETE"}]},
-            "meta": {"generation": "Hello!", "stop_reason": "stop", "prompt_token_count": 10, "generation_token_count": 5},
-            "mistral": {"outputs": [{"text": "Hello!", "stop_reason": "stop"}], "usage": {"prompt_tokens": 10, "completion_tokens": 5}},
-            "stability": {"completions": [{"text": "Hello!", "finish_reason": "stop"}], "usage": {"prompt_tokens": 10, "completion_tokens": 5}},
-            "writer": {"completions": [{"data": {"text": "Hello!"}, "finishReason": "stop"}], "usage": {"promptTokens": 10, "completionTokens": 5}},
-            "nova": {"output": {"message": {"content": [{"text": "Hello!"}]}}, "stopReason": "end_turn", "usage": {"inputTokens": 10, "outputTokens": 5}},
+            "ai21": {
+                "completions": [
+                    {"data": {"text": "Hello!"}, "finishReason": {"reason": "stop"}}
+                ]
+            },
+            "cohere": {
+                "generations": [{"text": "Hello!", "finish_reason": "COMPLETE"}]
+            },
+            "meta": {
+                "generation": "Hello!",
+                "stop_reason": "stop",
+                "prompt_token_count": 10,
+                "generation_token_count": 5,
+            },
+            "mistral": {
+                "outputs": [{"text": "Hello!", "stop_reason": "stop"}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+            },
+            "stability": {
+                "completions": [{"text": "Hello!", "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+            },
+            "writer": {
+                "completions": [{"data": {"text": "Hello!"}, "finishReason": "stop"}],
+                "usage": {"promptTokens": 10, "completionTokens": 5},
+            },
+            "nova": {
+                "output": {"message": {"content": [{"text": "Hello!"}]}},
+                "stopReason": "end_turn",
+                "usage": {"inputTokens": 10, "outputTokens": 5},
+            },
         }
 
         strategies_and_responses = [
-            (AI21Strategy("ai21.jamba-1-5-large-v1:0", mock_get_param_func), mock_responses["ai21"]),
-            (CohereStrategy("cohere.command-text-v14", mock_get_param_func), mock_responses["cohere"]),
-            (MetaStrategy("meta.llama2-13b-chat-v1", mock_get_param_func), mock_responses["meta"]),
-            (MistralStrategy("mistral.mistral-large-2402-v1:0", mock_get_param_func), mock_responses["mistral"]),
-            (StabilityStrategy("stability.sd3-5-large-v1:0", mock_get_param_func), mock_responses["stability"]),
-            (WriterStrategy("writer.palmyra-x4-v1:0", mock_get_param_func), mock_responses["writer"]),
-            (NovaStrategy("amazon.nova-pro-v1:0", mock_get_param_func), mock_responses["nova"]),
+            (
+                AI21Strategy("ai21.jamba-1-5-large-v1:0", mock_get_param_func),
+                mock_responses["ai21"],
+            ),
+            (
+                CohereStrategy("cohere.command-text-v14", mock_get_param_func),
+                mock_responses["cohere"],
+            ),
+            (
+                MetaStrategy("meta.llama2-13b-chat-v1", mock_get_param_func),
+                mock_responses["meta"],
+            ),
+            (
+                MistralStrategy("mistral.mistral-large-2402-v1:0", mock_get_param_func),
+                mock_responses["mistral"],
+            ),
+            (
+                StabilityStrategy("stability.sd3-5-large-v1:0", mock_get_param_func),
+                mock_responses["stability"],
+            ),
+            (
+                WriterStrategy("writer.palmyra-x4-v1:0", mock_get_param_func),
+                mock_responses["writer"],
+            ),
+            (
+                NovaStrategy("amazon.nova-pro-v1:0", mock_get_param_func),
+                mock_responses["nova"],
+            ),
         ]
 
         for strategy, mock_response in strategies_and_responses:
             response = strategy.parse_response(mock_response, sample_request)
             assert response.choices[0].message.content == "Hello!"
-            assert response.choices[0].message.role == "assistant" 
+            assert response.choices[0].message.role == "assistant"

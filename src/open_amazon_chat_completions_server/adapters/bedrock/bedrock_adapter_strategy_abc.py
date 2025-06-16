@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Any
 
 from ...core.models import (
-    Message,
+    ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
+    Message,
 )
 
 
@@ -19,14 +19,14 @@ class BedrockAdapterStrategy(ABC):
 
     @abstractmethod
     def prepare_request_payload(
-        self, request: ChatCompletionRequest, adapter_config_kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request: ChatCompletionRequest, adapter_config_kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         """Prepares the model-specific request body for Bedrock."""
         pass
 
     @abstractmethod
     def parse_response(
-        self, provider_response: Dict[str, Any], original_request: ChatCompletionRequest
+        self, provider_response: dict[str, Any], original_request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         """Parses the Bedrock model-specific response into a standard ChatCompletionResponse."""
         pass
@@ -34,7 +34,7 @@ class BedrockAdapterStrategy(ABC):
     @abstractmethod
     async def handle_stream_chunk(
         self,
-        chunk_data: Dict[str, Any],
+        chunk_data: dict[str, Any],
         original_request: ChatCompletionRequest,
         response_id: str,
         created_timestamp: int,
@@ -61,8 +61,8 @@ class BedrockAdapterStrategy(ABC):
         )  # Return original if not in map
 
     def _extract_system_prompt_and_messages(
-        self, messages: List[Message]
-    ) -> Tuple[Optional[str], List[Message]]:
+        self, messages: list[Message]
+    ) -> tuple[str | None, list[Message]]:
         """Extracts and combines all system messages, and returns remaining messages."""
         system_prompts = []
         processed_messages = []

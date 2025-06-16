@@ -1,14 +1,15 @@
-from typing import List, Optional, Literal, Dict, Any, Union
-from pydantic import BaseModel, Field, field_validator
 from enum import Enum
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class BedrockContentBlock(BaseModel):
     """Bedrock content block for multimodal content"""
 
     type: str
-    text: Optional[str] = None
-    source: Optional[Dict[str, Any]] = None  # For image content
+    text: str | None = None
+    source: dict[str, Any] | None = None  # For image content
 
     @field_validator("type")
     @classmethod
@@ -23,7 +24,7 @@ class BedrockMessage(BaseModel):
     """Bedrock message format"""
 
     role: Literal["user", "assistant"]
-    content: Union[str, List[BedrockContentBlock]]
+    content: str | list[BedrockContentBlock]
 
     @field_validator("content", mode="before")
     @classmethod
@@ -52,14 +53,14 @@ class BedrockTool(BaseModel):
 
     name: str
     description: str
-    input_schema: Dict[str, Any]
+    input_schema: dict[str, Any]
 
 
 class BedrockToolChoice(BaseModel):
     """Bedrock tool choice specification"""
 
     type: Literal["auto", "any", "tool"]
-    name: Optional[str] = None  # Required when type is "tool"
+    name: str | None = None  # Required when type is "tool"
 
     @field_validator("name")
     @classmethod
@@ -74,14 +75,14 @@ class BedrockClaudeRequest(BaseModel):
 
     anthropic_version: str = "bedrock-2023-05-31"
     max_tokens: int = Field(..., gt=0)
-    messages: List[BedrockMessage] = Field(..., min_length=1)
-    system: Optional[str] = None
-    temperature: Optional[float] = Field(None, ge=0.0, le=1.0)
-    top_p: Optional[float] = Field(None, ge=0.0, le=1.0)
-    top_k: Optional[int] = Field(None, ge=0)
-    stop_sequences: Optional[List[str]] = None
-    tools: Optional[List[BedrockTool]] = None
-    tool_choice: Optional[Union[str, BedrockToolChoice]] = None
+    messages: list[BedrockMessage] = Field(..., min_length=1)
+    system: str | None = None
+    temperature: float | None = Field(None, ge=0.0, le=1.0)
+    top_p: float | None = Field(None, ge=0.0, le=1.0)
+    top_k: int | None = Field(None, ge=0)
+    stop_sequences: list[str] | None = None
+    tools: list[BedrockTool] | None = None
+    tool_choice: str | BedrockToolChoice | None = None
 
     @field_validator("tool_choice", mode="before")
     @classmethod
@@ -98,9 +99,9 @@ class BedrockTitanConfig(BaseModel):
     """Bedrock Titan text generation configuration"""
 
     maxTokenCount: int = Field(..., gt=0)
-    temperature: Optional[float] = Field(None, ge=0.0, le=1.0)
-    topP: Optional[float] = Field(None, ge=0.0, le=1.0)
-    stopSequences: Optional[List[str]] = None
+    temperature: float | None = Field(None, ge=0.0, le=1.0)
+    topP: float | None = Field(None, ge=0.0, le=1.0)
+    stopSequences: list[str] | None = None
 
 
 class BedrockTitanRequest(BaseModel):
@@ -116,11 +117,11 @@ class BedrockClaudeResponse(BaseModel):
     id: str
     type: str = "message"
     role: Literal["assistant"]
-    content: List[BedrockContentBlock]
+    content: list[BedrockContentBlock]
     model: str
     stop_reason: Literal["end_turn", "max_tokens", "stop_sequence", "tool_use"]
-    stop_sequence: Optional[str] = None
-    usage: Dict[str, int]  # {"input_tokens": int, "output_tokens": int}
+    stop_sequence: str | None = None
+    usage: dict[str, int]  # {"input_tokens": int, "output_tokens": int}
 
 
 class BedrockTitanResult(BaseModel):
@@ -135,7 +136,7 @@ class BedrockTitanResponse(BaseModel):
     """Bedrock Titan response format"""
 
     inputTextTokenCount: int
-    results: List[Dict[str, Any]]  # Using Dict to match the test expectations
+    results: list[dict[str, Any]]  # Using Dict to match the test expectations
 
 
 # Streaming response models
@@ -143,10 +144,10 @@ class BedrockClaudeStreamChunk(BaseModel):
     """Bedrock Claude streaming chunk"""
 
     type: str
-    index: Optional[int] = None
-    delta: Optional[Dict[str, Any]] = None
-    content_block: Optional[BedrockContentBlock] = None
-    usage: Optional[Dict[str, int]] = None
+    index: int | None = None
+    delta: dict[str, Any] | None = None
+    content_block: BedrockContentBlock | None = None
+    usage: dict[str, int] | None = None
 
 
 class BedrockTitanStreamChunk(BaseModel):
@@ -154,8 +155,8 @@ class BedrockTitanStreamChunk(BaseModel):
 
     outputText: str
     index: int
-    totalOutputTextTokenCount: Optional[int] = None
-    completionReason: Optional[str] = None
+    totalOutputTextTokenCount: int | None = None
+    completionReason: str | None = None
 
 
 # Enum for request format detection

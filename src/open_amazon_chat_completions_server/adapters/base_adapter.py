@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Any, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from ..core.models import (
+    ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
 )
 
 
@@ -59,7 +60,7 @@ class BaseLLMAdapter(ABC):
     def _get_default_param(
         self,
         param_name: str,
-        provider_specific_name: Optional[str] = None,
+        provider_specific_name: str | None = None,
         default_value: Any = None,
     ) -> Any:
         """Helper to get parameters from kwargs or app_config with defaults."""
@@ -76,7 +77,7 @@ class BaseLLMAdapter(ABC):
         # Construct a potential config key based on provider and model type (e.g., DEFAULT_MAX_TOKENS_OPENAI)
         # This logic determines the provider prefix based on model_id patterns
         provider_prefix = "OPENAI"  # Default fallback
-        
+
         if self.model_id.startswith("anthropic."):
             provider_prefix = "CLAUDE"
         elif self.model_id.startswith("amazon.titan"):
