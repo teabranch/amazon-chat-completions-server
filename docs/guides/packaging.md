@@ -1,6 +1,6 @@
 # Packaging Guide for PyPI
 
-This guide outlines the steps to package the `open-amazon-chat-completions-server` project and publish it to the Python Package Index (PyPI).
+This guide outlines the steps to package the `open-bedrock-server` project and publish it to the Python Package Index (PyPI).
 
 ## Introduction
 
@@ -24,7 +24,7 @@ Your `pyproject.toml` file is the heart of your package's configuration. Ensure 
 Key sections to review and update:
 
 *   **Core Metadata**:
-    *   `name`: Should be unique on PyPI. `open_amazon_chat_completions_server` is likely fine.
+    *   `name`: Should be unique on PyPI. `open_bedrock_server` is likely fine.
     *   `version`: Update this for each new release (e.g., `0.1.0`, `0.1.1`, `0.2.0`).
     *   `authors`: Provide your name and email.
     *   `description`: A short, one-sentence summary of the package.
@@ -66,14 +66,14 @@ Key sections to review and update:
     *   Example:
         ```toml
         [project.urls]
-        "Homepage" = "https://github.com/yourusername/open-amazon-chat-completions-server"
-        "Bug Tracker" = "https://github.com/yourusername/open-amazon-chat-completions-server/issues"
-        "Documentation" = "https://github.com/yourusername/open-amazon-chat-completions-server/blob/main/README.md"
+        "Homepage" = "https://github.com/yourusername/open-bedrock-server"
+        "Bug Tracker" = "https://github.com/yourusername/open-bedrock-server/issues"
+        "Documentation" = "https://github.com/yourusername/open-bedrock-server/blob/main/README.md"
         ```
 
 *   **CLI Scripts (`[project.scripts]`)**:
     *   Ensure this correctly defines the entry point for your CLI.
-    *   Example: `amazon-chat = "src.open_amazon_chat_completions_server.cli.main:cli"` (This seems correct based on your current structure).
+    *   Example: `bedrock-chat = "src.open_bedrock_server.cli.main:cli"` (This seems correct based on your current structure).
 
 *   **Build System (`[build-system]`)**:
     *   Specify the build backend and its requirements.
@@ -129,8 +129,8 @@ Navigate to your project's root directory (where `pyproject.toml` is located) an
 python -m build
 ```
 This command will create a `dist/` directory containing two files:
-*   A source archive (e.g., `open_amazon_chat_completions_server-0.1.0.tar.gz`)
-*   A built distribution (wheel) (e.g., `open_amazon_chat_completions_server-0.1.0-py3-none-any.whl`)
+*   A source archive (e.g., `open_bedrock_server-0.1.0.tar.gz`)
+*   A built distribution (wheel) (e.g., `open_bedrock_server-0.1.0-py3-none-any.whl`)
 
 The wheel is a pre-compiled package format that's faster to install.
 
@@ -144,12 +144,12 @@ Before uploading, it's crucial to test if your package installs and works correc
     ```
 2.  Install your package's wheel file from the `dist/` directory (replace with your actual filename):
     ```bash
-    uv pip install /path/to/your/project/dist/open_amazon_chat_completions_server-0.1.0-py3-none-any.whl
+    uv pip install /path/to/your/project/dist/open_bedrock_server-0.1.0-py3-none-any.whl
     ```
 3.  Test the CLI commands:
     ```bash
-    amazon-chat --help
-    amazon-chat serve --help
+    bedrock-chat --help
+    bedrock-chat serve --help
     # Try running the server and chat client if possible, or at least check if commands are recognized.
     ```
 4.  If your package is also a library, try importing it and using some basic functionality in a Python interpreter.
@@ -184,14 +184,14 @@ TestPyPI is a separate instance of PyPI for testing the distribution process wit
     ```
 
 3.  **Verify on TestPyPI**:
-    Go to `https://test.pypi.org/project/open-amazon-chat-completions-server/` to see your uploaded package.
+    Go to `https://test.pypi.org/project/open-bedrock-server/` to see your uploaded package.
 
 4.  **Test Installation from TestPyPI**:
     In a new, clean virtual environment:
     ```bash
-    uv pip install --index-url https://test.pypi.org/simple/ open-amazon-chat-completions-server
+    uv pip install --index-url https://test.pypi.org/simple/ open-bedrock-server
     # Or, to include pre-releases if your version is like 0.1.0a1:
-    # uv pip install --index-url https://test.pypi.org/simple/ --pre open-amazon-chat-completions-server
+    # uv pip install --index-url https://test.pypi.org/simple/ --pre open-bedrock-server
     ```
     Test the installed package as in Step 6.
 
@@ -231,7 +231,7 @@ This helps track which commit corresponds to which release.
 
 ### Step 10: Post-Release
 
-*   Verify your package on its PyPI page (e.g., `https://pypi.org/project/open-amazon-chat-completions-server/`).
+*   Verify your package on its PyPI page (e.g., `https://pypi.org/project/open-bedrock-server/`).
 *   Announce your new release!
 *   For future updates, increment the version in `pyproject.toml` and repeat the build and upload process.
 

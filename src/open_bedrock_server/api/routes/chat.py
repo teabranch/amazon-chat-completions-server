@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
 # Import custom exceptions from the service layer and core
-from src.open_amazon_chat_completions_server.core.exceptions import (
+from src.open_bedrock_server.core.exceptions import (
     ConfigurationError,
     LLMIntegrationError,
     ModelNotFoundError,
@@ -22,20 +22,20 @@ from src.open_amazon_chat_completions_server.core.exceptions import (
     ServiceModelNotFoundError,
     ServiceUnavailableError,
 )
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
 )
-from src.open_amazon_chat_completions_server.services.file_processing_service import (
+from src.open_bedrock_server.services.file_processing_service import (
     get_file_processing_service,
 )
-from src.open_amazon_chat_completions_server.services.file_service import (
+from src.open_bedrock_server.services.file_service import (
     get_file_service,
 )
-from src.open_amazon_chat_completions_server.services.knowledge_base_integration_service import (
+from src.open_bedrock_server.services.knowledge_base_integration_service import (
     get_knowledge_base_integration_service,
 )
-from src.open_amazon_chat_completions_server.services.llm_service_factory import (
+from src.open_bedrock_server.services.llm_service_factory import (
     LLMServiceFactory,
 )
 
@@ -257,7 +257,7 @@ async def unified_chat_completions(
                                 break
                         else:
                             # No user message found, add as system message at the beginning
-                            from src.open_amazon_chat_completions_server.core.models import (
+                            from src.open_bedrock_server.core.models import (
                                 Message,
                             )
 

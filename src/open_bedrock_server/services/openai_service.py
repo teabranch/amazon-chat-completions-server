@@ -5,17 +5,17 @@ from collections.abc import AsyncGenerator
 from openai import APIError, AsyncOpenAI, AuthenticationError, NotFoundError
 
 # Import custom exceptions (assuming they would be defined in core.exceptions)
-from src.open_amazon_chat_completions_server.core.exceptions import (
+from src.open_bedrock_server.core.exceptions import (
     ConfigurationError,
     ServiceApiError,
     ServiceAuthenticationError,
     ServiceModelNotFoundError,
     ServiceUnavailableError,
 )
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ChatCompletionChoice as CoreChatCompletionChoice,  # Renaming to avoid conflict if OpenAI's Choice is used
 )
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ChatCompletionChunk,
     ChatCompletionChunkChoice,
     ChatCompletionRequest,
@@ -24,7 +24,7 @@ from src.open_amazon_chat_completions_server.core.models import (
     Message,
     ModelProviderInfo,
 )
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     Usage as CoreUsage,  # Import our Usage model
 )
 

@@ -40,12 +40,12 @@ CONFIGURABLE_KEYS = [
     # For the CLI client to connect to the server
     {
         "name": "CHAT_SERVER_URL",
-        "prompt": "URL for the Amazon Chat Server (CLI client use)",
+        "prompt": "URL for the Open Bedrock Server (CLI client use)",
         "default": "http://localhost:8000",
     },
     {
         "name": "CHAT_API_KEY",
-        "prompt": "API key for the Amazon Chat Server (CLI client use)",
+        "prompt": "API key for the Open Bedrock Server (CLI client use)",
         "default": "your-secret-api-key",
         "sensitive": True,
     },
@@ -90,8 +90,8 @@ CONFIGURABLE_KEYS = [
     },
     {
         "name": "AWS_ROLE_SESSION_NAME",
-        "prompt": "AWS Role Session Name (default: amazon-chat-completions-session)",
-        "default": "amazon-chat-completions-session",
+                    "prompt": "AWS Role Session Name (default: bedrock-server-session)",
+            "default": "bedrock-server-session",
         "sensitive": False,
     },
     {
@@ -120,7 +120,7 @@ EXPECTED_SERVER_API_KEY = os.getenv("CHAT_API_KEY", "your-api-key")
 
 @click.group()
 def cli():
-    """Amazon Chat Completions CLI"""
+    """Open Bedrock Server CLI"""
     pass
 
 
@@ -300,7 +300,7 @@ def configure_set_command(key=None, value=None):
 
     console.print("\nConfiguration saved.", style="bold green")
     console.print(
-        "If you configured server-side keys, restart 'amazon-chat serve' for changes to take effect.",
+        "If you configured server-side keys, restart 'bedrock-chat serve' for changes to take effect.",
         style="yellow",
     )
 
@@ -312,7 +312,7 @@ def configure_show_command():
     console.print("Current configuration from:", DOTENV_PATH, style="bold yellow")
     if not os.path.exists(DOTENV_PATH):
         console.print(
-            ".env file not found. Run 'amazon-chat config set' to create one.",
+            ".env file not found. Run 'bedrock-chat config set' to create one.",
             style="red",
         )
         return
@@ -376,7 +376,7 @@ def serve(host: str, port: int, reload: bool, env_file: str):
     # Uvicorn will automatically load a .env file if present in the working directory,
     # or we can specify it. This ensures it uses the one managed by `configure`.
     uvicorn.run(
-        "src.open_amazon_chat_completions_server.api.app:app",
+        "src.open_bedrock_server.api.app:app",
         host=host,
         port=port,
         reload=reload,
@@ -518,7 +518,7 @@ async def _async_chat(
 
     if not api_key:
         console.print(
-            "[bold red]Error: API key is not configured. Please run 'amazon-chat config set' or set CHAT_API_KEY environment variable.[/bold red]"
+            "[bold red]Error: API key is not configured. Please run 'bedrock-chat config set' or set CHAT_API_KEY environment variable.[/bold red]"
         )
         return
 
@@ -708,7 +708,7 @@ def list_models_command(server_url: str, api_key: str):
 
     if not api_key:
         console.print(
-            "[bold red]Error: API key is not configured. Please run 'amazon-chat config set' or set CHAT_API_KEY environment variable.[/bold red]"
+            "[bold red]Error: API key is not configured. Please run 'bedrock-chat config set' or set CHAT_API_KEY environment variable.[/bold red]"
         )
         return
 

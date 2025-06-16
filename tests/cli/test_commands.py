@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from src.open_amazon_chat_completions_server.cli.main import cli
+from src.open_bedrock_server.cli.main import cli
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def mock_history_dir(tmp_path):
 
 def test_config_show(runner, mock_env_file):
     with patch(
-        "src.open_amazon_chat_completions_server.cli.main.DOTENV_PATH", mock_env_file
+        "src.open_bedrock_server.cli.main.DOTENV_PATH", mock_env_file
     ):
         result = runner.invoke(cli, ["config", "show"])
         assert result.exit_code == 0
@@ -77,7 +77,7 @@ def test_config_set(runner):
 
     try:
         with patch(
-            "src.open_amazon_chat_completions_server.cli.main.DOTENV_PATH", env_file
+            "src.open_bedrock_server.cli.main.DOTENV_PATH", env_file
         ):
             # Test setting individual values
             result = runner.invoke(cli, ["config", "set", "API_KEY", "test-key"])
@@ -91,13 +91,13 @@ def test_config_set(runner):
         os.unlink(env_file)
 
 
-@patch("src.open_amazon_chat_completions_server.cli.main.make_api_request")
-@patch("src.open_amazon_chat_completions_server.cli.main.ChatHistoryManager")
+@patch("src.open_bedrock_server.cli.main.make_api_request")
+@patch("src.open_bedrock_server.cli.main.ChatHistoryManager")
 def test_chat_command_non_streaming(
     mock_manager_class, mock_make_request, runner, mock_env_file
 ):
     with patch(
-        "src.open_amazon_chat_completions_server.cli.main.DOTENV_PATH", mock_env_file
+        "src.open_bedrock_server.cli.main.DOTENV_PATH", mock_env_file
     ):
         # Mock the ChatHistoryManager
         mock_manager = MagicMock()
@@ -159,13 +159,13 @@ def test_chat_command_streaming(runner):
     pass
 
 
-@patch("src.open_amazon_chat_completions_server.cli.main.make_api_request")
-@patch("src.open_amazon_chat_completions_server.cli.main.ChatHistoryManager")
+@patch("src.open_bedrock_server.cli.main.make_api_request")
+@patch("src.open_bedrock_server.cli.main.ChatHistoryManager")
 def test_chat_command_tool_calls(
     mock_manager_class, mock_make_request, runner, mock_env_file
 ):
     with patch(
-        "src.open_amazon_chat_completions_server.cli.main.DOTENV_PATH", mock_env_file
+        "src.open_bedrock_server.cli.main.DOTENV_PATH", mock_env_file
     ):
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
@@ -295,7 +295,7 @@ def test_serve_command(mock_run, runner):
 
     # Verify uvicorn.run was called with correct arguments
     mock_run.assert_called_once_with(
-        "src.open_amazon_chat_completions_server.api.app:app",
+        "src.open_bedrock_server.api.app:app",
         host="localhost",
         port=8000,
         reload=False,
@@ -303,7 +303,7 @@ def test_serve_command(mock_run, runner):
     )
 
 
-@patch("src.open_amazon_chat_completions_server.cli.main.ChatHistoryManager")
+@patch("src.open_bedrock_server.cli.main.ChatHistoryManager")
 def test_history_list_command(mock_manager_class, runner, mock_history_dir):
     """Test listing chat history when no sessions exist."""
     # Mock the ChatHistoryManager
@@ -325,7 +325,7 @@ def test_history_list_command(mock_manager_class, runner, mock_history_dir):
     # e.g., checking the exact number of lines or specific border characters.
 
 
-@patch("src.open_amazon_chat_completions_server.cli.main.ChatHistoryManager")
+@patch("src.open_bedrock_server.cli.main.ChatHistoryManager")
 def test_history_list_command_with_sessions(
     mock_manager_class, runner, mock_history_dir
 ):

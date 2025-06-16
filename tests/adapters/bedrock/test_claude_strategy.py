@@ -2,10 +2,10 @@ from typing import Any
 
 import pytest
 
-from src.open_amazon_chat_completions_server.adapters.bedrock.claude_strategy import (
+from src.open_bedrock_server.adapters.bedrock.claude_strategy import (
     ClaudeStrategy,
 )
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,

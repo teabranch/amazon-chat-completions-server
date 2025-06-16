@@ -4,7 +4,7 @@ import pytest
 from fastapi import status
 from httpx import ASGITransport, AsyncClient
 
-from src.open_amazon_chat_completions_server.api.app import app  # Main FastAPI app
+from src.open_bedrock_server.api.app import app  # Main FastAPI app
 
 # Use the test API key from conftest.py
 OPENAI_API_KEY_IS_SET = bool(os.getenv("OPENAI_API_KEY"))

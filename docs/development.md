@@ -1,21 +1,23 @@
 ---
+description: Development guide for extending and customizing Open Bedrock Server Server
 layout: default
-title: Development Guide
 nav_order: 6
-description: "Development guide for extending and customizing Amazon Chat Completions Server"
+title: Development Guide
 ---
 
 # Development Guide
+
 {: .no_toc }
 
-Guide for developers who want to extend, customize, or contribute to the Amazon Chat Completions Server.
+Guide for developers who want to extend, customize, or contribute to the Open Bedrock Server Server.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
+
 {: .no_toc .text-delta }
 
 1. TOC
-{:toc}
+   {:toc}
 
 ---
 
@@ -32,8 +34,8 @@ Guide for developers who want to extend, customize, or contribute to the Amazon 
 
 ```bash
 # Fork and clone the repository
-git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
-cd open-amazon-chat-completions-server
+git clone https://github.com/teabranch/open-bedrock-server.git
+cd open-bedrock-server
 
 # Create virtual environment
 uv venv
@@ -64,10 +66,10 @@ DEBUG=true
 
 ## Project Structure
 
-```
-open-amazon-chat-completions-server/
+```ini
+open-bedrock-server/
 ├── src/
-│   └── open_amazon_chat_completions_server/
+│   └── open_bedrock_server/
 │       ├── api/                 # FastAPI routes and endpoints
 │       ├── core/                # Core models and utilities
 │       ├── services/            # Business logic and integrations
@@ -120,17 +122,17 @@ pre-commit run --all-files
 
 ```bash
 # Start development server with auto-reload
-open-amazon-chat serve --reload --log-level debug
+open-bedrock-chat serve --reload --log-level debug
 
 # Or use uvicorn directly
-uvicorn src.open_amazon_chat_completions_server.main:app --reload --log-level debug
+uvicorn src.open_bedrock_server.main:app --reload --log-level debug
 ```
 
 ### 4. Interactive Development
 
 ```bash
 # Start interactive chat for testing
-open-amazon-chat chat --model gpt-4o-mini --server-url http://localhost:8000
+open-bedrock-chat chat --model gpt-4o-mini --server-url http://localhost:8000
 
 # Test API endpoints
 curl -X POST http://localhost:8000/v1/chat/completions \
@@ -146,7 +148,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 Create a new service class:
 
 ```python
-# src/open_amazon_chat_completions_server/services/new_provider_service.py
+# src/open_bedrock_server/services/new_provider_service.py
 from typing import AsyncGenerator, List, Optional
 from ..core.models import ChatCompletionRequest, ChatCompletionResponse, Message
 from ..core.exceptions import LLMIntegrationError
@@ -189,7 +191,7 @@ class NewProviderService(BaseLLMService):
 Register the service in the factory:
 
 ```python
-# src/open_amazon_chat_completions_server/services/llm_service_factory.py
+# src/open_bedrock_server/services/llm_service_factory.py
 from .new_provider_service import NewProviderService
 
 class LLMServiceFactory:
@@ -199,12 +201,11 @@ class LLMServiceFactory:
             api_key = os.getenv("NEW_PROVIDER_API_KEY")
             return NewProviderService(api_key=api_key)
 
-### 2. Adding New File Processing Types
 
 Extend the file processing service to support new file formats:
 
 ```python
-# src/open_amazon_chat_completions_server/services/file_processing_service.py
+# src/open_bedrock_server/services/file_processing_service.py
 from typing import Tuple
 
 class FileProcessingService:
@@ -252,7 +253,7 @@ class FileProcessingService:
 Add support for different storage backends:
 
 ```python
-# src/open_amazon_chat_completions_server/services/storage/base_storage.py
+# src/open_bedrock_server/services/storage/base_storage.py
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple
 
@@ -284,7 +285,7 @@ class BaseStorageService(ABC):
         """List files with optional purpose filter"""
         pass
 
-# src/open_amazon_chat_completions_server/services/storage/local_storage.py
+# src/open_bedrock_server/services/storage/local_storage.py
 import os
 import json
 import aiofiles
@@ -328,7 +329,7 @@ class LocalStorageService(BaseStorageService):
 Create new API endpoints for file operations:
 
 ```python
-# src/open_amazon_chat_completions_server/api/routes/files.py
+# src/open_bedrock_server/api/routes/files.py
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from typing import Optional
 
@@ -371,15 +372,16 @@ async def search_files(
     results = await file_service.search_files(query, limit)
     return {"results": results}
 ```
-        # ... existing providers
-```
 
-### 2. Adding New API Endpoints
+        # ... existing providers
+
+```py
+
 
 Create a new router:
 
 ```python
-# src/open_amazon_chat_completions_server/api/new_endpoints.py
+# src/open_bedrock_server/api/new_endpoints.py
 from fastapi import APIRouter, Depends, HTTPException
 from ..core.auth import verify_api_key
 from ..core.models import CustomRequest, CustomResponse
@@ -402,7 +404,7 @@ async def custom_endpoint(
 Register the router:
 
 ```python
-# src/open_amazon_chat_completions_server/main.py
+# src/open_bedrock_server/main.py
 from .api.new_endpoints import router as new_router
 
 app.include_router(new_router)
@@ -413,7 +415,7 @@ app.include_router(new_router)
 Create a new command:
 
 ```python
-# src/open_amazon_chat_completions_server/cli/new_command.py
+# src/open_bedrock_server/cli/new_command.py
 import click
 from ..services.llm_service_factory import LLMServiceFactory
 
@@ -428,7 +430,7 @@ def new_command(option: str):
 Register the command:
 
 ```python
-# src/open_amazon_chat_completions_server/cli/main.py
+# src/open_bedrock_server/cli/main.py
 from .new_command import new_command
 
 cli.add_command(new_command)
@@ -438,7 +440,7 @@ cli.add_command(new_command)
 
 ### Test Structure
 
-```
+```ini
 tests/
 ├── unit/                    # Unit tests
 │   ├── test_services/
@@ -457,8 +459,8 @@ tests/
 # tests/unit/test_services/test_openai_service.py
 import pytest
 from unittest.mock import AsyncMock, patch
-from src.open_amazon_chat_completions_server.services.openai_service import OpenAIService
-from src.open_amazon_chat_completions_server.core.models import Message
+from src.open_bedrock_server.services.openai_service import OpenAIService
+from src.open_bedrock_server.core.models import Message
 
 @pytest.fixture
 def openai_service():
@@ -488,7 +490,7 @@ async def test_chat_completion(openai_service):
 # tests/integration/test_api_integration.py
 import pytest
 from fastapi.testclient import TestClient
-from src.open_amazon_chat_completions_server.main import app
+from src.open_bedrock_server.main import app
 
 @pytest.fixture
 def client():
@@ -517,7 +519,7 @@ def test_chat_completions_endpoint(client):
 # tests/unit/test_cli/test_chat_command.py
 import pytest
 from click.testing import CliRunner
-from src.open_amazon_chat_completions_server.cli.main import cli
+from src.open_bedrock_server.cli.main import cli
 
 def test_chat_command():
     """Test the chat CLI command"""
@@ -640,7 +642,7 @@ logger.error("Error message")
 ### Debug Configuration
 
 ```python
-# src/open_amazon_chat_completions_server/core/config.py
+# src/open_bedrock_server/core/config.py
 import os
 
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
@@ -730,7 +732,7 @@ async def limited_concurrent_processing(requests: List[dict], max_concurrent: in
 
 Use conventional commit format:
 
-```
+```yaml
 feat: add new LLM provider support
 fix: resolve streaming response issue
 docs: update API documentation
@@ -760,10 +762,10 @@ uv publish
 
 ```bash
 # Build Docker image
-docker build -t open-amazon-chat-completions-server:latest .
+docker build -t open-bedrock-server:latest .
 
 # Run locally
-docker run -p 8000:8000 open-amazon-chat-completions-server:latest
+docker run -p 8000:8000 open-bedrock-server:latest
 
 # Deploy to production
 # (Use your preferred deployment method)
@@ -771,4 +773,4 @@ docker run -p 8000:8000 open-amazon-chat-completions-server:latest
 
 ---
 
-This development guide provides a comprehensive overview of the development process. For specific implementation details, refer to the existing codebase and follow the established patterns. 
+This development guide provides a comprehensive overview of the development process. For specific implementation details, refer to the existing codebase and follow the established patterns.

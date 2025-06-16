@@ -75,7 +75,7 @@ jobs:
 
     environment:
       name: 'pypi'
-      url: https://pypi.org/project/open-amazon-chat-completions-server
+      url: https://pypi.org/project/open-bedrock-server
 
     steps:
       - name: Retrieve release distributions
@@ -88,3 +88,33 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+
+      - name: Upload to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine upload dist/* --repository pypi --verbose
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: |
+            ## Changes
+            
+            Please see the [changelog](CHANGELOG.md) for details.
+            
+            ## PyPI Package
+            
+            ```bash
+            pip install open-bedrock-server==${{ github.ref_name }}
+            ```
+            
+            ## Installation
+            
+            Visit the [PyPI package page](https://pypi.org/project/open-bedrock-server) for installation instructions.
+          
+          url: https://pypi.org/project/open-bedrock-server
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

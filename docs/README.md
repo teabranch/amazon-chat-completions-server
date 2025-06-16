@@ -1,6 +1,6 @@
 # Documentation
 
-This directory contains the Jekyll-based documentation for the Amazon Chat Completions Server, designed for deployment to GitHub Pages.
+This directory contains the Jekyll-based documentation for the Open Bedrock Server Server, designed for deployment to GitHub Pages.
 
 ## 🚀 Quick Setup
 
@@ -26,7 +26,7 @@ This directory contains the Jekyll-based documentation for the Amazon Chat Compl
    bundle exec jekyll serve
    ```
    
-   The site will be available at `http://localhost:4000/open-amazon-chat-completions-server/`
+   The site will be available at `http://localhost:4000/open-bedrock-server/`
 
 ### GitHub Pages Deployment
 
@@ -100,7 +100,7 @@ Use fenced code blocks with language specification:
 ````markdown
 ```bash
 # Example command
-amazon-chat serve --port 8000
+bedrock-chat serve --port 8000
 ```
 ````
 
@@ -121,7 +121,7 @@ Key configuration files:
 
 ## 🌐 Live Site
 
-The documentation is available at: https://teabranch.github.io/open-amazon-chat-completions-server/
+The documentation is available at: https://teabranch.github.io/open-bedrock-server/
 
 ## 📚 Resources
 

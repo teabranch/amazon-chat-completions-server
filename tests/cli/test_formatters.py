@@ -1,7 +1,7 @@
 import pytest
 from rich.console import Console
 
-from src.open_amazon_chat_completions_server.cli.formatters import ChatFormatter
+from src.open_bedrock_server.cli.formatters import ChatFormatter
 
 
 @pytest.fixture

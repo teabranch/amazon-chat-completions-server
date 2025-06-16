@@ -1,25 +1,32 @@
 version: '3.8'
 
 services:
-  amazon-chat-completions-server:
+  open-bedrock-server:
     build: .
     ports:
       - "8000:8000"
     environment:
       - PORT=8000
-      # Add environment variables as needed
-      # - OPENAI_API_KEY=${OPENAI_API_KEY}
-      # - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      # - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      # - AWS_REGION=${AWS_REGION}
-      # - S3_FILES_BUCKET=${S3_FILES_BUCKET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bedrock-server.rule=Host(`localhost`)"
+      - "traefik.http.services.bedrock-server.loadbalancer.server.port=8000"
     # Uncomment to mount environment file
     # env_file:
     #   - .env 

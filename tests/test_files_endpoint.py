@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from src.open_amazon_chat_completions_server.api.app import app
+from src.open_bedrock_server.api.app import app
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def client():
 def mock_file_service():
     """Mock the FileService to avoid actual S3 calls during testing."""
     with patch(
-        "src.open_amazon_chat_completions_server.api.routes.files.FileService"
+        "src.open_bedrock_server.api.routes.files.FileService"
     ) as mock_service:
         # Mock the service instance
         mock_instance = MagicMock()
@@ -60,7 +60,7 @@ class TestFilesEndpoint:
         """Test successful file upload."""
         # Mock the get_file_service function to return our mock
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_file_service
 
@@ -142,7 +142,7 @@ class TestFilesEndpoint:
         mock_file_service.validate_credentials = AsyncMock()
 
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_file_service
 
@@ -166,7 +166,7 @@ class TestFilesEndpoint:
         mock_service.validate_credentials = AsyncMock()
 
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_service
 
@@ -279,7 +279,7 @@ class TestFileRetrieval:
         mock_s3_client.head_object.side_effect = mock_head_object
 
         # Create a mock service with the mocked S3 client
-        from src.open_amazon_chat_completions_server.services.file_service import (
+        from src.open_bedrock_server.services.file_service import (
             FileService,
         )
 
@@ -287,7 +287,7 @@ class TestFileRetrieval:
         mock_service.s3_client = mock_s3_client
 
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_service
 
@@ -330,7 +330,7 @@ class TestFileRetrieval:
         }
 
         # Create a mock service with the mocked S3 client
-        from src.open_amazon_chat_completions_server.services.file_service import (
+        from src.open_bedrock_server.services.file_service import (
             FileService,
         )
 
@@ -338,7 +338,7 @@ class TestFileRetrieval:
         mock_service.s3_client = mock_s3_client
 
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_service
 
@@ -369,7 +369,7 @@ class TestFileRetrieval:
         }
 
         # Create a mock service with the mocked S3 client
-        from src.open_amazon_chat_completions_server.services.file_service import (
+        from src.open_bedrock_server.services.file_service import (
             FileService,
         )
 
@@ -377,7 +377,7 @@ class TestFileRetrieval:
         mock_service.s3_client = mock_s3_client
 
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_service
 
@@ -402,7 +402,7 @@ class TestFileRetrieval:
         mock_s3_client.list_objects_v2.return_value = {}
 
         # Create a mock service with the mocked S3 client
-        from src.open_amazon_chat_completions_server.services.file_service import (
+        from src.open_bedrock_server.services.file_service import (
             FileService,
         )
 
@@ -410,7 +410,7 @@ class TestFileRetrieval:
         mock_service.s3_client = mock_s3_client
 
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_service
 
@@ -448,7 +448,7 @@ class TestFileRetrieval:
         mock_s3_client.get_object.return_value = {"Body": mock_body}
 
         # Create a mock service with the mocked S3 client
-        from src.open_amazon_chat_completions_server.services.file_service import (
+        from src.open_bedrock_server.services.file_service import (
             FileService,
         )
 
@@ -456,7 +456,7 @@ class TestFileRetrieval:
         mock_service.s3_client = mock_s3_client
 
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_service
 
@@ -487,7 +487,7 @@ class TestFileRetrieval:
         }
 
         # Create a mock service with the mocked S3 client
-        from src.open_amazon_chat_completions_server.services.file_service import (
+        from src.open_bedrock_server.services.file_service import (
             FileService,
         )
 
@@ -495,7 +495,7 @@ class TestFileRetrieval:
         mock_service.s3_client = mock_s3_client
 
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.files.get_file_service"
+            "src.open_bedrock_server.api.routes.files.get_file_service"
         ) as mock_get_service:
             mock_get_service.return_value = mock_service
 
@@ -517,7 +517,7 @@ class TestFileProcessing:
 
     def test_process_text_file(self):
         """Test processing plain text files."""
-        from src.open_amazon_chat_completions_server.services.file_processing_service import (
+        from src.open_bedrock_server.services.file_processing_service import (
             FileProcessingService,
         )
 
@@ -534,7 +534,7 @@ class TestFileProcessing:
 
     def test_process_json_file(self):
         """Test processing JSON files."""
-        from src.open_amazon_chat_completions_server.services.file_processing_service import (
+        from src.open_bedrock_server.services.file_processing_service import (
             FileProcessingService,
         )
 
@@ -552,7 +552,7 @@ class TestFileProcessing:
 
     def test_process_csv_file(self):
         """Test processing CSV files."""
-        from src.open_amazon_chat_completions_server.services.file_processing_service import (
+        from src.open_bedrock_server.services.file_processing_service import (
             FileProcessingService,
         )
 
@@ -568,7 +568,7 @@ class TestFileProcessing:
 
     def test_process_unsupported_file(self):
         """Test processing unsupported file types."""
-        from src.open_amazon_chat_completions_server.services.file_processing_service import (
+        from src.open_bedrock_server.services.file_processing_service import (
             FileProcessingService,
         )
 
@@ -587,9 +587,9 @@ class TestFileProcessing:
 class TestChatCompletionsWithFiles:
     """Test chat completions with file integration."""
 
-    @patch("src.open_amazon_chat_completions_server.api.routes.chat.get_file_service")
+    @patch("src.open_bedrock_server.api.routes.chat.get_file_service")
     @patch(
-        "src.open_amazon_chat_completions_server.services.llm_service_factory.LLMServiceFactory.get_service_for_model"
+        "src.open_bedrock_server.services.llm_service_factory.LLMServiceFactory.get_service_for_model"
     )
     @patch.dict(os.environ, {"API_KEY": "test-api-key"})
     def test_chat_completion_with_files(
@@ -611,12 +611,12 @@ class TestChatCompletionsWithFiles:
         mock_get_service.return_value = mock_llm_service
 
         # Import the correct model classes
-        from src.open_amazon_chat_completions_server.core.models import (
+        from src.open_bedrock_server.core.models import (
             ChatCompletionChoice,
             ChatCompletionResponse,
             Usage,
         )
-        from src.open_amazon_chat_completions_server.core.models import (
+        from src.open_bedrock_server.core.models import (
             Message as ResponseMessage,
         )
 

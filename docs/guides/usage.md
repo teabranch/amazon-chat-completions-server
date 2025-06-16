@@ -3,13 +3,13 @@ layout: default
 title: Usage Guide
 parent: Guides
 nav_order: 1
-description: "Programming examples and integration patterns for Amazon Chat Completions Server"
+description: "Programming examples and integration patterns for Open Bedrock Server Server"
 ---
 
 # Usage Guide
 {: .no_toc }
 
-This guide provides practical examples for using the Amazon Chat Completions Server library in your Python projects.
+This guide provides practical examples for using the Open Bedrock Server Server library in your Python projects.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -60,9 +60,9 @@ LOG_LEVEL="INFO"
 
 ```python
 import asyncio
-from src.open_amazon_chat_completions_server.core.models import Message
-from src.open_amazon_chat_completions_server.services.llm_service_factory import LLMServiceFactory
-from src.open_amazon_chat_completions_server.core.exceptions import LLMIntegrationError
+from src.open_bedrock_server.core.models import Message
+from src.open_bedrock_server.services.llm_service_factory import LLMServiceFactory
+from src.open_bedrock_server.core.exceptions import LLMIntegrationError
 
 # Get service instances
 openai_service = LLMServiceFactory.get_service(
@@ -265,7 +265,7 @@ asyncio.run(cross_provider_example())
 ### Comprehensive Error Handling
 
 ```python
-from src.open_amazon_chat_completions_server.core.exceptions import (
+from src.open_bedrock_server.core.exceptions import (
     LLMIntegrationError,
     AuthenticationError,
     RateLimitError,
@@ -619,4 +619,4 @@ async def chat_view(request):
 
 ---
 
-This usage guide provides comprehensive examples for integrating the Amazon Chat Completions Server into your applications. For more specific use cases or advanced configurations, refer to the other guides in this documentation. 
+This usage guide provides comprehensive examples for integrating the Open Bedrock Server Server into your applications. For more specific use cases or advanced configurations, refer to the other guides in this documentation. 

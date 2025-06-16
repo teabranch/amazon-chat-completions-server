@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from src.open_amazon_chat_completions_server.cli.chat_history import (
+from src.open_bedrock_server.cli.chat_history import (
     ChatHistoryManager,
     ChatSession,
 )

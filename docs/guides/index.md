@@ -3,13 +3,13 @@ layout: default
 title: Guides
 nav_order: 5
 has_children: true
-description: "Comprehensive guides for Amazon Chat Completions Server"
+description: "Comprehensive guides for Open Bedrock Server Server"
 ---
 
 # Guides
 {: .no_toc }
 
-Comprehensive guides and tutorials for the Amazon Chat Completions Server.
+Comprehensive guides and tutorials for the Open Bedrock Server Server.
 {: .fs-6 .fw-300 }
 
 ---
@@ -49,7 +49,7 @@ If you can't find what you're looking for in these guides:
 
 1. Check the [API Reference](../api-reference) for endpoint documentation
 2. Review the [CLI Reference](../cli-reference) for command-line usage
-3. Visit the [GitHub repository](https://github.com/yourusername/open-amazon-chat-completions-server) for issues and discussions
+3. Visit the [GitHub repository](https://github.com/yourusername/open-bedrock-server) for issues and discussions
 4. Read the main [README](../index) for an overview
 
 ---

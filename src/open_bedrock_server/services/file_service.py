@@ -347,7 +347,7 @@ class FileService:
                     "file_id": file_id,
                     "original_filename": filename,
                     "purpose": purpose,
-                    "uploaded_by": "amazon-chat-completions-server",
+                    "uploaded_by": "open-bedrock-server",
                 },
             )
 

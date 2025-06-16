@@ -15,7 +15,7 @@ from botocore.exceptions import (
 )
 
 # Import custom exceptions
-from src.open_amazon_chat_completions_server.core.exceptions import (
+from src.open_bedrock_server.core.exceptions import (
     ConfigurationError,
     ServiceApiError,
     ServiceAuthenticationError,
@@ -24,10 +24,10 @@ from src.open_amazon_chat_completions_server.core.exceptions import (
     ServiceUnavailableError,
     StreamingError,
 )
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ChatCompletionChoice as CoreChatCompletionChoice,  # For parsing Claude responses
 )
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ChatCompletionChunk,
     ChatCompletionChunkChoice,
     ChatCompletionRequest,

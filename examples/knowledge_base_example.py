@@ -2,7 +2,7 @@
 """
 Knowledge Base Integration Example
 
-This example demonstrates how to use the Amazon Chat Completions Server
+This example demonstrates how to use the Open Bedrock Server
 with Bedrock Knowledge Bases for Retrieval-Augmented Generation (RAG).
 
 Prerequisites:

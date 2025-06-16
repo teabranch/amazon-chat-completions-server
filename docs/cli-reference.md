@@ -2,13 +2,13 @@
 layout: default
 title: CLI Reference
 nav_order: 4
-description: "Complete CLI reference for Amazon Chat Completions Server"
+description: "Complete CLI reference for Open Bedrock Server Server"
 ---
 
 # CLI Reference
 {: .no_toc }
 
-Complete reference for the Amazon Chat Completions Server command-line interface.
+Complete reference for the Open Bedrock Server Server command-line interface.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -28,7 +28,7 @@ The CLI is installed automatically when you install the package:
 uv pip install -e .
 
 # Verify installation
-amazon-chat --version
+bedrock-chat --version
 ```
 
 ## Global Options
@@ -36,7 +36,7 @@ amazon-chat --version
 These options are available for all commands:
 
 ```bash
-amazon-chat [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]
+bedrock-chat [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]
 ```
 
 **Global Options:**
@@ -54,12 +54,12 @@ amazon-chat [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]
 
 ## Chat Commands
 
-### amazon-chat chat
+### bedrock-chat chat
 
 Start an interactive chat session with an LLM.
 
 ```bash
-amazon-chat chat [OPTIONS]
+bedrock-chat chat [OPTIONS]
 ```
 
 **Options:**
@@ -76,19 +76,19 @@ amazon-chat chat [OPTIONS]
 
 ```bash
 # Basic chat with default model
-amazon-chat chat
+bedrock-chat chat
 
 # Chat with specific model
-amazon-chat chat --model gpt-4o
+bedrock-chat chat --model gpt-4o
 
 # Chat with custom server
-amazon-chat chat --server-url https://my-server.com --api-key my-key
+bedrock-chat chat --server-url https://my-server.com --api-key my-key
 
 # Chat with custom settings
-amazon-chat chat --model gpt-4o-mini --temperature 0.8 --max-tokens 500
+bedrock-chat chat --model gpt-4o-mini --temperature 0.8 --max-tokens 500
 
 # Chat with system prompt
-amazon-chat chat --system-prompt "You are a helpful coding assistant"
+bedrock-chat chat --system-prompt "You are a helpful coding assistant"
 ```
 
 **Interactive Commands:**
@@ -107,7 +107,7 @@ Once in a chat session, you can use these commands:
 **Example Session:**
 
 ```
-$ amazon-chat chat --model gpt-4o-mini
+$ bedrock-chat chat --model gpt-4o-mini
 🚀 Starting chat with gpt-4o-mini
 Type '/help' for commands or '/exit' to quit
 
@@ -134,12 +134,12 @@ You: /exit
 
 ## Server Commands
 
-### amazon-chat serve
+### bedrock-chat serve
 
 Start the API server.
 
 ```bash
-amazon-chat serve [OPTIONS]
+bedrock-chat serve [OPTIONS]
 ```
 
 **Options:**
@@ -155,29 +155,29 @@ amazon-chat serve [OPTIONS]
 
 ```bash
 # Start server with defaults
-amazon-chat serve
+bedrock-chat serve
 
 # Start server on all interfaces
-amazon-chat serve --host 0.0.0.0 --port 8000
+bedrock-chat serve --host 0.0.0.0 --port 8000
 
 # Start with auto-reload for development
-amazon-chat serve --reload
+bedrock-chat serve --reload
 
 # Start with multiple workers for production
-amazon-chat serve --host 0.0.0.0 --port 8000 --workers 4
+bedrock-chat serve --host 0.0.0.0 --port 8000 --workers 4
 
 # Start with custom env file
-amazon-chat serve --env-file production.env
+bedrock-chat serve --env-file production.env
 
 # Start with debug logging
-amazon-chat serve --log-level debug
+bedrock-chat serve --log-level debug
 ```
 
 **Server Output:**
 
 ```
-$ amazon-chat serve --host 0.0.0.0 --port 8000
-🚀 Starting Amazon Chat Completions Server
+$ bedrock-chat serve --host 0.0.0.0 --port 8000
+🚀 Starting Open Bedrock Server Server
 📍 Server URL: http://0.0.0.0:8000
 📚 API Documentation: http://0.0.0.0:8000/docs
 🔑 Authentication: API key required (Authorization: Bearer header)
@@ -190,12 +190,12 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 
 ## Configuration Commands
 
-### amazon-chat config
+### bedrock-chat config
 
 Manage configuration settings.
 
 ```bash
-amazon-chat config SUBCOMMAND [OPTIONS]
+bedrock-chat config SUBCOMMAND [OPTIONS]
 ```
 
 **Subcommands:**
@@ -204,12 +204,12 @@ amazon-chat config SUBCOMMAND [OPTIONS]
 - `get KEY` - Get specific configuration value
 - `unset KEY` - Remove configuration value
 
-### amazon-chat config set
+### bedrock-chat config set
 
 Set configuration values interactively.
 
 ```bash
-amazon-chat config set [OPTIONS]
+bedrock-chat config set [OPTIONS]
 ```
 
 **Options:**
@@ -221,8 +221,8 @@ amazon-chat config set [OPTIONS]
 **Interactive Setup:**
 
 ```bash
-$ amazon-chat config set
-🔧 Amazon Chat Completions Server Configuration
+$ bedrock-chat config set
+🔧 Open Bedrock Server Server Configuration
 
 ? OpenAI API Key: sk-your-openai-key
 ? Server API Key (for authentication): your-server-api-key
@@ -239,18 +239,18 @@ $ amazon-chat config set
 
 ```bash
 # Set specific configuration value
-amazon-chat config set --key OPENAI_API_KEY --value sk-your-key
+bedrock-chat config set --key OPENAI_API_KEY --value sk-your-key
 
 # Set with custom file
-amazon-chat config set --file production.env
+bedrock-chat config set --file production.env
 ```
 
-### amazon-chat config show
+### bedrock-chat config show
 
 Show current configuration with sensitive values masked.
 
 ```bash
-amazon-chat config show [OPTIONS]
+bedrock-chat config show [OPTIONS]
 ```
 
 **Options:**
@@ -262,7 +262,7 @@ amazon-chat config show [OPTIONS]
 **Example Output:**
 
 ```bash
-$ amazon-chat config show
+$ bedrock-chat config show
 📋 Current Configuration
 
 ┌─────────────────────────┬─────────────────────────┬────────────┐
@@ -282,12 +282,12 @@ $ amazon-chat config show
 📚 Documentation: http://localhost:8000/docs
 ```
 
-### amazon-chat config get
+### bedrock-chat config get
 
 Get a specific configuration value.
 
 ```bash
-amazon-chat config get KEY [OPTIONS]
+bedrock-chat config get KEY [OPTIONS]
 ```
 
 **Options:**
@@ -299,24 +299,24 @@ amazon-chat config get KEY [OPTIONS]
 
 ```bash
 # Get specific value (masked)
-amazon-chat config get OPENAI_API_KEY
+bedrock-chat config get OPENAI_API_KEY
 # Output: sk-*********************
 
 # Get value without masking
-amazon-chat config get OPENAI_API_KEY --no-mask
+bedrock-chat config get OPENAI_API_KEY --no-mask
 # Output: sk-your-actual-key-here
 
 # Get from custom file
-amazon-chat config get AWS_REGION --file production.env
+bedrock-chat config get AWS_REGION --file production.env
 # Output: us-west-2
 ```
 
-### amazon-chat config unset
+### bedrock-chat config unset
 
 Remove a configuration value.
 
 ```bash
-amazon-chat config unset KEY [OPTIONS]
+bedrock-chat config unset KEY [OPTIONS]
 ```
 
 **Options:**
@@ -328,20 +328,20 @@ amazon-chat config unset KEY [OPTIONS]
 
 ```bash
 # Remove configuration value
-amazon-chat config unset AWS_PROFILE
+bedrock-chat config unset AWS_PROFILE
 
 # Remove without confirmation
-amazon-chat config unset AWS_PROFILE --no-confirm
+bedrock-chat config unset AWS_PROFILE --no-confirm
 ```
 
 ## Model Commands
 
-### amazon-chat models
+### bedrock-chat models
 
 List available models.
 
 ```bash
-amazon-chat models [OPTIONS]
+bedrock-chat models [OPTIONS]
 ```
 
 **Options:**
@@ -355,22 +355,22 @@ amazon-chat models [OPTIONS]
 
 ```bash
 # List all models
-amazon-chat models
+bedrock-chat models
 
 # List models from specific server
-amazon-chat models --server-url https://my-server.com --api-key my-key
+bedrock-chat models --server-url https://my-server.com --api-key my-key
 
 # List only OpenAI models
-amazon-chat models --provider openai
+bedrock-chat models --provider openai
 
 # Output as JSON
-amazon-chat models --format json
+bedrock-chat models --format json
 ```
 
 **Example Output:**
 
 ```bash
-$ amazon-chat models
+$ bedrock-chat models
 📋 Available Models
 
 ┌─────────────────────────────────────┬──────────┬─────────────────────────┐
@@ -395,16 +395,16 @@ $ amazon-chat models
 
 ```bash
 # 1. Set up configuration
-amazon-chat config set
+bedrock-chat config set
 
 # 2. Start the server
-amazon-chat serve --host 0.0.0.0 --port 8000 &
+bedrock-chat serve --host 0.0.0.0 --port 8000 &
 
 # 3. List available models
-amazon-chat models
+bedrock-chat models
 
 # 4. Start a chat session
-amazon-chat chat --model gpt-4o-mini
+bedrock-chat chat --model gpt-4o-mini
 
 # 5. In another terminal, test API directly
 curl -X POST http://localhost:8000/v1/chat/completions \
@@ -417,26 +417,26 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 
 ```bash
 # Start server with auto-reload
-amazon-chat serve --reload --log-level debug
+bedrock-chat serve --reload --log-level debug
 
 # In another terminal, test changes
-amazon-chat chat --model gpt-4o-mini --temperature 0.8
+bedrock-chat chat --model gpt-4o-mini --temperature 0.8
 
 # Check configuration
-amazon-chat config show
+bedrock-chat config show
 
 # Test different models
-amazon-chat models --provider openai
+bedrock-chat models --provider openai
 ```
 
 ### Production Deployment
 
 ```bash
 # Set production configuration
-amazon-chat config set --file production.env
+bedrock-chat config set --file production.env
 
 # Start production server
-amazon-chat serve \
+bedrock-chat serve \
   --host 0.0.0.0 \
   --port 8000 \
   --workers 4 \
@@ -485,14 +485,14 @@ Configuration is loaded in this order (later sources override earlier ones):
 The CLI validates configuration on startup:
 
 ```bash
-$ amazon-chat serve
+$ bedrock-chat serve
 ❌ Configuration Error: OPENAI_API_KEY is required
-💡 Run 'amazon-chat config set' to configure
+💡 Run 'bedrock-chat config set' to configure
 
-$ amazon-chat config set
+$ bedrock-chat config set
 # ... interactive setup ...
 
-$ amazon-chat serve
+$ bedrock-chat serve
 ✅ Configuration valid
 🚀 Starting server...
 ```
@@ -503,19 +503,19 @@ The CLI provides helpful error messages and suggestions:
 
 ```bash
 # Missing configuration
-$ amazon-chat chat
+$ bedrock-chat chat
 ❌ Error: API_KEY not configured
-💡 Run 'amazon-chat config set' to set up authentication
+💡 Run 'bedrock-chat config set' to set up authentication
 
 # Server not running
-$ amazon-chat chat
+$ bedrock-chat chat
 ❌ Error: Cannot connect to server at http://localhost:8000
-💡 Start the server with 'amazon-chat serve'
+💡 Start the server with 'bedrock-chat serve'
 
 # Invalid model
-$ amazon-chat chat --model invalid-model
+$ bedrock-chat chat --model invalid-model
 ❌ Error: Model 'invalid-model' not found
-💡 Run 'amazon-chat models' to see available models
+💡 Run 'bedrock-chat models' to see available models
 ```
 
 ## Shell Completion
@@ -530,9 +530,9 @@ echo 'eval "$(_AMAZON_CHAT_COMPLETE=bash_source amazon-chat)"' >> ~/.bashrc
 echo 'eval "$(_AMAZON_CHAT_COMPLETE=zsh_source amazon-chat)"' >> ~/.zshrc
 
 # Fish
-echo '_AMAZON_CHAT_COMPLETE=fish_source amazon-chat | source' >> ~/.config/fish/completions/amazon-chat.fish
+echo '_AMAZON_CHAT_COMPLETE=fish_source bedrock-chat | source' >> ~/.config/fish/completions/amazon-chat.fish
 ```
 
 ---
 
-This CLI reference provides complete documentation for all commands and options. For interactive help, use `amazon-chat --help` or `amazon-chat COMMAND --help`. 
+This CLI reference provides complete documentation for all commands and options. For interactive help, use `bedrock-chat --help` or `bedrock-chat COMMAND --help`. 

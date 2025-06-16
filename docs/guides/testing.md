@@ -1,28 +1,30 @@
 ---
+description: Testing strategies and coverage for Open Bedrock Server Server
 layout: default
-title: Testing
-parent: Guides
 nav_order: 5
-description: "Testing strategies and coverage for Amazon Chat Completions Server"
+parent: Guides
+title: Testing
 ---
 
 # Testing Guide
+
 {: .no_toc }
 
-Comprehensive testing strategies and coverage for the Amazon Chat Completions Server.
+Comprehensive testing strategies and coverage for the Open Bedrock Server Server.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
+
 {: .no_toc .text-delta }
 
 1. TOC
-{:toc}
+   {:toc}
 
 ---
 
 ## Testing Philosophy
 
-The Amazon Chat Completions Server follows a comprehensive testing strategy that ensures reliability, maintainability, and confidence in deployments. Our testing approach includes:
+The Open Bedrock Server Server follows a comprehensive testing strategy that ensures reliability, maintainability, and confidence in deployments. Our testing approach includes:
 
 - **Unit Tests** - Test individual components in isolation
 - **Integration Tests** - Test component interactions
@@ -32,7 +34,7 @@ The Amazon Chat Completions Server follows a comprehensive testing strategy that
 
 ## Test Structure
 
-```
+```ini
 tests/
 ├── unit/                    # Unit tests
 │   ├── test_services/
@@ -56,16 +58,17 @@ tests/
 ### Service Layer Tests
 
 **Testing LLM Services:**
+
 ```python
 # tests/unit/test_services/test_openai_service.py
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from src.open_amazon_chat_completions_server.services.openai_service import OpenAIService
-from src.open_amazon_chat_completions_server.core.models import Message, ChatCompletionResponse
+from src.open_bedrock_server.services.openai_service import OpenAIService
+from src.open_bedrock_server.core.models import Message, ChatCompletionResponse
 
 @pytest.fixture
 def openai_service():
-    with patch('src.open_amazon_chat_completions_server.services.openai_service.AsyncOpenAI') as mock_client:
+    with patch('src.open_bedrock_server.services.openai_service.AsyncOpenAI') as mock_client:
         service = OpenAIService(api_key="test-key")
         service.client = mock_client.return_value
         return service
@@ -122,12 +125,13 @@ async def test_chat_completion_with_tools(openai_service):
 ### Adapter Layer Tests
 
 **Testing Format Conversion:**
+
 ```python
 # tests/unit/test_adapters/test_bedrock_adapter.py
 import pytest
-from src.open_amazon_chat_completions_server.adapters.bedrock_adapter import BedrockAdapter
-from src.open_amazon_chat_completions_server.strategies.claude_strategy import ClaudeStrategy
-from src.open_amazon_chat_completions_server.core.models import ChatCompletionRequest, Message
+from src.open_bedrock_server.adapters.bedrock_adapter import BedrockAdapter
+from src.open_bedrock_server.strategies.claude_strategy import ClaudeStrategy
+from src.open_bedrock_server.core.models import ChatCompletionRequest, Message
 
 @pytest.fixture
 def bedrock_adapter():
@@ -162,11 +166,12 @@ def test_convert_to_bedrock_request(bedrock_adapter):
 ### Strategy Layer Tests
 
 **Testing Bedrock Strategies:**
+
 ```python
 # tests/unit/test_strategies/test_claude_strategy.py
 import pytest
-from src.open_amazon_chat_completions_server.strategies.claude_strategy import ClaudeStrategy
-from src.open_amazon_chat_completions_server.core.models import ChatCompletionRequest, Message
+from src.open_bedrock_server.strategies.claude_strategy import ClaudeStrategy
+from src.open_bedrock_server.core.models import ChatCompletionRequest, Message
 
 @pytest.fixture
 def claude_strategy():
@@ -221,11 +226,12 @@ def test_convert_tool_calls(claude_strategy):
 ### Model Tests
 
 **Testing Pydantic Models:**
+
 ```python
 # tests/unit/test_models/test_chat_models.py
 import pytest
 from pydantic import ValidationError
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ChatCompletionRequest, Message, Tool, Function
 )
 
@@ -283,12 +289,13 @@ def test_tool_definition():
 ### API Integration Tests
 
 **Testing FastAPI Endpoints:**
+
 ```python
 # tests/integration/test_api/test_chat_completions.py
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
-from src.open_amazon_chat_completions_server.main import app
+from src.open_bedrock_server.main import app
 
 @pytest.fixture
 def client():
@@ -296,7 +303,7 @@ def client():
 
 @pytest.fixture
 def mock_openai_service():
-    with patch('src.open_amazon_chat_completions_server.services.llm_service_factory.LLMServiceFactory.get_service') as mock:
+    with patch('src.open_bedrock_server.services.llm_service_factory.LLMServiceFactory.get_service') as mock:
         service = AsyncMock()
         mock.return_value = service
         yield service
@@ -389,12 +396,13 @@ def test_invalid_model(client):
 ### CLI Integration Tests
 
 **Testing CLI Commands:**
+
 ```python
 # tests/integration/test_cli/test_commands.py
 import pytest
 from click.testing import CliRunner
 from unittest.mock import patch, MagicMock
-from src.open_amazon_chat_completions_server.cli.main import cli
+from src.open_bedrock_server.cli.main import cli
 
 @pytest.fixture
 def runner():
@@ -439,7 +447,7 @@ def test_models_command(runner):
         assert result.exit_code == 0
         assert "gpt-4o-mini" in result.output
 
-@patch('src.open_amazon_chat_completions_server.cli.chat.InteractiveChatSession')
+@patch('src.open_bedrock_server.cli.chat.InteractiveChatSession')
 def test_chat_command(mock_chat_session, runner):
     """Test interactive chat command"""
     mock_session = MagicMock()
@@ -457,12 +465,13 @@ def test_chat_command(mock_chat_session, runner):
 ### Complete Workflow Tests
 
 **Testing Full User Workflows:**
+
 ```python
 # tests/e2e/test_complete_workflows.py
 import pytest
 import asyncio
 from fastapi.testclient import TestClient
-from src.open_amazon_chat_completions_server.main import app
+from src.open_bedrock_server.main import app
 
 @pytest.fixture
 def client():
@@ -527,6 +536,7 @@ def test_streaming_workflow(client):
 ### Load Testing
 
 **Testing System Performance:**
+
 ```python
 # tests/performance/test_load.py
 import pytest
@@ -591,6 +601,7 @@ def test_memory_usage():
 ### Pytest Configuration
 
 **conftest.py:**
+
 ```python
 # tests/conftest.py
 import pytest
@@ -670,6 +681,7 @@ def sample_tools():
 ### Test Markers
 
 **pytest.ini:**
+
 ```ini
 [tool:pytest]
 markers =
@@ -731,6 +743,7 @@ pytest -k "test_chat_completion"
 ### Continuous Integration
 
 **GitHub Actions Workflow:**
+
 ```yaml
 name: Tests
 
@@ -788,4 +801,4 @@ jobs:
 
 ---
 
-This comprehensive testing strategy ensures the Amazon Chat Completions Server maintains high quality and reliability across all components and use cases. 
+This comprehensive testing strategy ensures the Open Bedrock Server Server maintains high quality and reliability across all components and use cases.

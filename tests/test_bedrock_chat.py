@@ -3,8 +3,8 @@ import os
 import pytest
 from async_asgi_testclient import TestClient
 
-from src.open_amazon_chat_completions_server.api.app import app
-from src.open_amazon_chat_completions_server.api.schemas.requests import (
+from src.open_bedrock_server.api.app import app
+from src.open_bedrock_server.api.schemas.requests import (
     ChatCompletionRequest,
     Message,
 )

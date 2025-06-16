@@ -6,8 +6,8 @@ import pytest
 from async_asgi_testclient import TestClient
 from fastapi import status
 
-from src.open_amazon_chat_completions_server.api.app import app
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.api.app import app
+from src.open_bedrock_server.core.models import (
     ChatCompletionChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -211,7 +211,7 @@ async def test_chat_completion_openai_format(client: TestClient, test_api_key):
 
     # Mock the LLM service
     with patch(
-        "src.open_amazon_chat_completions_server.services.llm_service_factory.LLMServiceFactory.get_service_for_model"
+        "src.open_bedrock_server.services.llm_service_factory.LLMServiceFactory.get_service_for_model"
     ) as mock_factory:
         mock_service = Mock()
         mock_service.provider_name = "test"

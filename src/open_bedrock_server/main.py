@@ -239,6 +239,6 @@ async def main():
 if __name__ == "__main__":
     # To run this main.py directly for testing:
     # Ensure you are in the project root directory and run:
-    # python -m src.open_amazon_chat_completions_server.main
+    # python -m src.open_bedrock_server.main
     # Make sure .env file is in the project root.
     asyncio.run(main())
