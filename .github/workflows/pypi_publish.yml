@@ -43,11 +43,21 @@ jobs:
           GITHUB_TAG=${GITHUB_REF#refs/tags/}
           echo "Hatch version: $HATCH_VERSION"
           echo "GitHub release tag: $GITHUB_TAG"
-          # Ensure they match (allowing for 'v' prefix in tag)
-          if [[ "$GITHUB_TAG" == "v$HATCH_VERSION" ]] || [[ "$GITHUB_TAG" == "$HATCH_VERSION" ]]; then
+          
+          # Strip 'v' prefix from tag if present
+          CLEAN_TAG=${GITHUB_TAG#v}
+          
+          # Check if hatch version matches the tag exactly
+          if [[ "$HATCH_VERSION" == "$CLEAN_TAG" ]]; then
             echo "✅ Version consistency verified: $HATCH_VERSION"
+          # Check if this is a dev version based on the tag (common with hatch-vcs)
+          elif [[ "$HATCH_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+\+g[a-f0-9]+\.d[0-9]+ ]]; then
+            echo "⚠️  Development version detected: $HATCH_VERSION"
+            echo "This suggests there are commits after the tag $CLEAN_TAG"
+            echo "Consider creating a proper release tag at the exact commit you want to release"
+            exit 1
           else
-            echo "❌ Version mismatch! Hatch: $HATCH_VERSION, Tag: $GITHUB_TAG"
+            echo "❌ Version mismatch! Hatch: $HATCH_VERSION, Tag: $CLEAN_TAG"
             exit 1
           fi
 
