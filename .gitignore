@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 .ruff_cache/*
+.ruff_cache
 
 # C extensions
 *.so
