@@ -1,21 +1,23 @@
 ---
+description: Quick start guide for Open Bedrock Server Server
 layout: default
-title: Getting Started
 nav_order: 2
-description: "Quick start guide for Open Bedrock Server Server"
+title: Getting Started
 ---
 
 # Getting Started
+
 {: .no_toc }
 
-This guide will help you get the Open Bedrock Server Server up and running quickly.
+This guide will help you get the Open Bedrock Server up and running quickly.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
+
 {: .no_toc .text-delta }
 
 1. TOC
-{:toc}
+   {:toc}
 
 ---
 
@@ -26,8 +28,8 @@ Before you begin, ensure you have:
 - **Python 3.12+** installed
 - **uv** package manager (recommended) or pip
 - **API keys** for the services you want to use:
-  - OpenAI API key (for OpenAI models)
-  - AWS credentials (for Bedrock models)
+   - OpenAI API key (for OpenAI models)
+   - AWS credentials (for Bedrock models)
 
 ### Installing uv
 
@@ -247,6 +249,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 ```
 
 The system automatically:
+
 1. Retrieves the file content from S3
 2. Processes it based on file type (CSV, JSON, text, etc.)
 3. Includes the processed content as context in your chat
@@ -382,16 +385,19 @@ Now that you have the server running:
 ### Common Issues
 
 **Server won't start:**
+
 - Check that the port isn't already in use
 - Verify your configuration with `bedrock-chat config show`
 - Check logs for specific error messages
 
 **API calls fail:**
+
 - Verify your API key is correct
 - Check that the server is running on the expected port
 - Ensure your request format is valid
 
 **AWS/Bedrock errors:**
+
 - Verify AWS credentials are configured correctly
 - Check that you have the necessary IAM permissions
 - Ensure the AWS region is set correctly
@@ -423,4 +429,4 @@ Key configuration variables:
 | `AWS_REGION` | AWS region | For Bedrock/file operations |
 | `AWS_PROFILE` | AWS profile name | Alternative to static credentials |
 | `DEFAULT_OPENAI_MODEL` | Default OpenAI model | No |
-| `LOG_LEVEL` | Logging level | No | 
+| `LOG_LEVEL` | Logging level | No |
