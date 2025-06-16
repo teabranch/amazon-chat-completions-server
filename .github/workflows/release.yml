@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for setuptools-scm
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,6 +40,16 @@ jobs:
           VERSION=${VERSION#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Release version: $VERSION"
+          
+          # Debug git information
+          echo "Git ref: $GITHUB_REF"
+          echo "Git tags:"
+          git tag --list
+          echo "Current commit:"
+          git log --oneline -1
+          echo "setuptools-scm version detection:"
+          python -m pip install setuptools-scm
+          python -c "import setuptools_scm; print('Detected version:', setuptools_scm.get_version())"
 
       - name: Install build tools
         run: |
@@ -50,10 +62,18 @@ jobs:
         run: |
           # Build package with version from tag
           echo "Building with version: $SETUPTOOLS_SCM_PRETEND_VERSION"
+          echo "Verifying setuptools-scm can detect version:"
+          python -c "import setuptools_scm; print('Final version:', setuptools_scm.get_version())"
           python -m build
+          echo "Built packages:"
+          ls -la dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          verbose: true
+          attestations: false  # Disable attestations to avoid sigstore issues
 
   docker-publish:
     runs-on: ubuntu-latest
