@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends
-from typing import List
+import logging
 
-from ..middleware.auth import verify_api_key
-from src.open_amazon_chat_completions_server.services.llm_service_factory import (
-    LLMServiceFactory,
-)
+from fastapi import APIRouter, Depends
+
 from src.open_amazon_chat_completions_server.core.models import (
     ModelProviderInfo,
 )  # Core model from service
-from ..schemas.responses import ModelListResponse, ModelInfo  # API response models
-import logging
+from src.open_amazon_chat_completions_server.services.llm_service_factory import (
+    LLMServiceFactory,
+)
+
+from ..middleware.auth import verify_api_key
+from ..schemas.responses import ModelInfo, ModelListResponse  # API response models
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -26,7 +27,7 @@ router = APIRouter()
 )
 async def list_models_route():  # Renamed to avoid conflict with imported list_models
     """Lists available models from configured LLM providers, conforming to OpenAI spec."""
-    all_provider_models: List[ModelProviderInfo] = []
+    all_provider_models: list[ModelProviderInfo] = []
 
     try:
         openai_service = LLMServiceFactory.get_service("openai")
@@ -60,7 +61,7 @@ async def list_models_route():  # Renamed to avoid conflict with imported list_m
     #     logger.error(f"Error listing models from Bedrock: {e}")
 
     # Map List[ModelProviderInfo] to List[ModelInfo] for the response
-    api_model_list: List[ModelInfo] = []
+    api_model_list: list[ModelInfo] = []
     for p_model in all_provider_models:
         api_model_list.append(
             ModelInfo(

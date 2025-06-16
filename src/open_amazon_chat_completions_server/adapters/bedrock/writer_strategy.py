@@ -1,20 +1,20 @@
 import logging
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
+from ...core.exceptions import APIRequestError, UnsupportedFeatureError
 from ...core.models import (
-    Message,
+    ChatCompletionChoice,
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
-    ChatCompletionChoice,
     ChoiceDelta,
-    ChatCompletionChunkChoice,
+    Message,
     Usage,
 )
-from ...core.exceptions import APIRequestError, UnsupportedFeatureError
+from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +27,11 @@ class WriterStrategy(BedrockAdapterStrategy):
         logger.info(f"WriterStrategy initialized for model: {self.model_id}")
 
     def _format_messages_to_writer_prompt(
-        self, messages: List[Message], system_prompt: Optional[str]
+        self, messages: list[Message], system_prompt: str | None
     ) -> str:
         """Formats messages into Writer's expected prompt format."""
         formatted_parts = []
-        
+
         if system_prompt:
             formatted_parts.append(f"System: {system_prompt}")
 
@@ -55,8 +55,8 @@ class WriterStrategy(BedrockAdapterStrategy):
         return "\n\n".join(formatted_parts)
 
     def prepare_request_payload(
-        self, request: ChatCompletionRequest, adapter_config_kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request: ChatCompletionRequest, adapter_config_kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         if request.tools or request.tool_choice:
             raise UnsupportedFeatureError(
                 "Writer Palmyra models do not support OpenAI-style 'tools' or 'tool_choice' parameters."
@@ -65,7 +65,9 @@ class WriterStrategy(BedrockAdapterStrategy):
         system_prompt, processed_messages = self._extract_system_prompt_and_messages(
             request.messages
         )
-        prompt = self._format_messages_to_writer_prompt(processed_messages, system_prompt)
+        prompt = self._format_messages_to_writer_prompt(
+            processed_messages, system_prompt
+        )
 
         # Writer Palmyra parameters
         max_tokens = (
@@ -73,7 +75,7 @@ class WriterStrategy(BedrockAdapterStrategy):
             if request.max_tokens is not None
             else self._get_default_param("max_tokens", default_value=2048)
         )
-        
+
         temperature = (
             request.temperature
             if request.temperature is not None
@@ -92,14 +94,17 @@ class WriterStrategy(BedrockAdapterStrategy):
             "top_k": "topK",
             "stop_sequences": "stopSequences",
         }
-        
+
         for generic_param, writer_param in writer_params.items():
             value = None
-            if hasattr(request, generic_param) and getattr(request, generic_param) is not None:
+            if (
+                hasattr(request, generic_param)
+                and getattr(request, generic_param) is not None
+            ):
                 value = getattr(request, generic_param)
             elif generic_param in adapter_config_kwargs:
                 value = adapter_config_kwargs[generic_param]
-            
+
             if value is not None:
                 payload[writer_param] = value
 
@@ -107,7 +112,7 @@ class WriterStrategy(BedrockAdapterStrategy):
         return payload
 
     def parse_response(
-        self, provider_response: Dict[str, Any], original_request: ChatCompletionRequest
+        self, provider_response: dict[str, Any], original_request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         # Writer response structure: {"completions": [{"data": {"text": "..."}, "finishReason": "..."}]}
         completions = provider_response.get("completions", [])
@@ -129,7 +134,9 @@ class WriterStrategy(BedrockAdapterStrategy):
 
         # Writer token usage
         prompt_tokens = provider_response.get("usage", {}).get("promptTokens", 0)
-        completion_tokens = provider_response.get("usage", {}).get("completionTokens", 0)
+        completion_tokens = provider_response.get("usage", {}).get(
+            "completionTokens", 0
+        )
         total_tokens = prompt_tokens + completion_tokens
 
         return ChatCompletionResponse(
@@ -148,7 +155,7 @@ class WriterStrategy(BedrockAdapterStrategy):
 
     async def handle_stream_chunk(
         self,
-        chunk_data: Dict[str, Any],
+        chunk_data: dict[str, Any],
         original_request: ChatCompletionRequest,
         response_id: str,
         created_timestamp: int,
@@ -156,12 +163,12 @@ class WriterStrategy(BedrockAdapterStrategy):
         # Writer streaming format
         delta_content = None
         finish_reason = None
-        
+
         if "completion" in chunk_data:
             completion = chunk_data["completion"]
             if "data" in completion:
                 delta_content = completion["data"].get("text", "")
-            
+
             if "finishReason" in completion:
                 finish_reason = self._map_finish_reason(completion["finishReason"])
 
@@ -191,4 +198,4 @@ class WriterStrategy(BedrockAdapterStrategy):
             "length": "length",
             "maxTokens": "length",
         }
-        return mapping.get(provider_reason.lower(), provider_reason) 
+        return mapping.get(provider_reason.lower(), provider_reason)

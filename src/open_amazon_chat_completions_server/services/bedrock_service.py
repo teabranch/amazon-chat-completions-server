@@ -1,39 +1,43 @@
-import os
+import asyncio
 import json
-from typing import List, AsyncGenerator, Optional, Union, Dict, Any
+import logging
+import os
+import time
+from collections.abc import AsyncGenerator
+from typing import Any
+
 import boto3
 from botocore.exceptions import (
+    BotoCoreError,
     ClientError,
     NoCredentialsError,
     PartialCredentialsError,
-    BotoCoreError,
 )
-import asyncio
-
-from src.open_amazon_chat_completions_server.core.models import (
-    Message,
-    ChatCompletionResponse,
-    ChatCompletionChunk,
-    ModelProviderInfo,
-    ChoiceDelta,
-    ChatCompletionChunkChoice,
-    ChatCompletionChoice as CoreChatCompletionChoice,  # For parsing Claude responses
-    ChatCompletionRequest,
-)
-from .llm_service_abc import AbstractLLMService
 
 # Import custom exceptions
 from src.open_amazon_chat_completions_server.core.exceptions import (
     ConfigurationError,
+    ServiceApiError,
     ServiceAuthenticationError,
     ServiceModelNotFoundError,
-    ServiceApiError,
-    ServiceUnavailableError,
     ServiceRateLimitError,
+    ServiceUnavailableError,
     StreamingError,
 )
-import logging
-import time
+from src.open_amazon_chat_completions_server.core.models import (
+    ChatCompletionChoice as CoreChatCompletionChoice,  # For parsing Claude responses
+)
+from src.open_amazon_chat_completions_server.core.models import (
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChoiceDelta,
+    Message,
+    ModelProviderInfo,
+)
+
+from .llm_service_abc import AbstractLLMService
 
 logger = logging.getLogger(__name__)
 
@@ -78,12 +82,12 @@ def get_provider_from_bedrock_model_id(model_id: str) -> str:
 class BedrockService(AbstractLLMService):
     def __init__(
         self,
-        AWS_REGION: Optional[str] = None,
-        AWS_PROFILE: Optional[str] = None,
-        AWS_ROLE_ARN: Optional[str] = None,
-        AWS_EXTERNAL_ID: Optional[str] = None,
-        AWS_ROLE_SESSION_NAME: Optional[str] = None,
-        AWS_WEB_IDENTITY_TOKEN_FILE: Optional[str] = None,
+        AWS_REGION: str | None = None,
+        AWS_PROFILE: str | None = None,
+        AWS_ROLE_ARN: str | None = None,
+        AWS_EXTERNAL_ID: str | None = None,
+        AWS_ROLE_SESSION_NAME: str | None = None,
+        AWS_WEB_IDENTITY_TOKEN_FILE: str | None = None,
         validate_credentials: bool = True,
         **kwargs,
     ):
@@ -91,8 +95,12 @@ class BedrockService(AbstractLLMService):
         self.AWS_PROFILE = AWS_PROFILE or os.getenv("AWS_PROFILE")
         self.AWS_ROLE_ARN = AWS_ROLE_ARN or os.getenv("AWS_ROLE_ARN")
         self.AWS_EXTERNAL_ID = AWS_EXTERNAL_ID or os.getenv("AWS_EXTERNAL_ID")
-        self.AWS_ROLE_SESSION_NAME = AWS_ROLE_SESSION_NAME or os.getenv("AWS_ROLE_SESSION_NAME", "bedrock-service-session")
-        self.AWS_WEB_IDENTITY_TOKEN_FILE = AWS_WEB_IDENTITY_TOKEN_FILE or os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
+        self.AWS_ROLE_SESSION_NAME = AWS_ROLE_SESSION_NAME or os.getenv(
+            "AWS_ROLE_SESSION_NAME", "bedrock-service-session"
+        )
+        self.AWS_WEB_IDENTITY_TOKEN_FILE = AWS_WEB_IDENTITY_TOKEN_FILE or os.getenv(
+            "AWS_WEB_IDENTITY_TOKEN_FILE"
+        )
         self.validate_credentials = validate_credentials
 
         if not self.AWS_REGION:
@@ -104,7 +112,7 @@ class BedrockService(AbstractLLMService):
 
         try:
             session = self._create_aws_session()
-            
+
             # Test credentials early by trying to get caller identity (optional for testing)
             if self.validate_credentials:
                 sts_client = session.client("sts")
@@ -127,14 +135,18 @@ class BedrockService(AbstractLLMService):
                         or error_code == "SignatureDoesNotMatch"
                     ):
                         logger.error(f"AWS STS authentication failure: {e}")
-                        raise ConfigurationError(f"AWS authentication failed (STS): {e}")
+                        raise ConfigurationError(
+                            f"AWS authentication failed (STS): {e}"
+                        )
                     logger.warning(
                         f"AWS STS GetCallerIdentity failed with ClientError (possibly ignorable if other services work): {e}"
                     )
                     # Not raising ConfigurationError here for all ClientErrors from STS, as it might be overly strict
                     # if the target Bedrock region/service is accessible via other means (e.g. instance profile)
             else:
-                logger.info("Skipping AWS credential validation (validate_credentials=False)")
+                logger.info(
+                    "Skipping AWS credential validation (validate_credentials=False)"
+                )
 
             self.bedrock_runtime_client = session.client("bedrock-runtime")
             self.bedrock_client = session.client("bedrock")
@@ -164,18 +176,22 @@ class BedrockService(AbstractLLMService):
     def _create_aws_session(self) -> boto3.Session:
         """Create an AWS session using the configured authentication method."""
         # Check what authentication methods are available
-        static_keys_present = bool(os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY"))
+        static_keys_present = bool(
+            os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")
+        )
         profile_present = bool(self.AWS_PROFILE)
         role_arn_present = bool(self.AWS_ROLE_ARN)
         web_identity_present = bool(self.AWS_WEB_IDENTITY_TOKEN_FILE)
-        
+
         # Check if this is an AWS SSO role that cannot assume itself
-        is_sso_role = role_arn_present and 'AWSReservedSSO' in self.AWS_ROLE_ARN
-        
-        logger.info(f"AWS authentication methods detected - Static keys: {static_keys_present}, "
-                   f"Profile: {profile_present}, Role ARN: {role_arn_present}, "
-                   f"Web identity: {web_identity_present}, SSO Role: {is_sso_role}")
-        
+        is_sso_role = role_arn_present and "AWSReservedSSO" in self.AWS_ROLE_ARN
+
+        logger.info(
+            f"AWS authentication methods detected - Static keys: {static_keys_present}, "
+            f"Profile: {profile_present}, Role ARN: {role_arn_present}, "
+            f"Web identity: {web_identity_present}, SSO Role: {is_sso_role}"
+        )
+
         # Priority order: static credentials > profile > role ARN > web identity > default
         if static_keys_present:
             logger.info("Creating boto3 session with static AWS credentials.")
@@ -183,42 +199,55 @@ class BedrockService(AbstractLLMService):
                 aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
                 aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
                 aws_session_token=os.getenv("AWS_SESSION_TOKEN"),
-                region_name=self.AWS_REGION
+                region_name=self.AWS_REGION,
             )
         elif profile_present and is_sso_role:
             # For AWS SSO roles, use the profile directly instead of role assumption
-            logger.info(f"Creating boto3 session with AWS SSO profile: {self.AWS_PROFILE} (skipping role assumption for SSO role)")
+            logger.info(
+                f"Creating boto3 session with AWS SSO profile: {self.AWS_PROFILE} (skipping role assumption for SSO role)"
+            )
             return boto3.Session(
-                profile_name=self.AWS_PROFILE, 
-                region_name=self.AWS_REGION
+                profile_name=self.AWS_PROFILE, region_name=self.AWS_REGION
             )
         elif profile_present:
-            logger.info(f"Creating boto3 session with profile: {self.AWS_PROFILE} and region: {self.AWS_REGION}")
+            logger.info(
+                f"Creating boto3 session with profile: {self.AWS_PROFILE} and region: {self.AWS_REGION}"
+            )
             return boto3.Session(
-                profile_name=self.AWS_PROFILE, 
-                region_name=self.AWS_REGION
+                profile_name=self.AWS_PROFILE, region_name=self.AWS_REGION
             )
         elif role_arn_present:
-            logger.info(f"Creating boto3 session with role assumption: {self.AWS_ROLE_ARN}")
+            logger.info(
+                f"Creating boto3 session with role assumption: {self.AWS_ROLE_ARN}"
+            )
             # Check if we have base credentials for role assumption
             base_creds_available = (
-                static_keys_present or 
-                profile_present or 
-                bool(os.getenv("AWS_PROFILE")) or  # Check env var directly
+                static_keys_present
+                or profile_present
+                or bool(os.getenv("AWS_PROFILE"))  # Check env var directly
+                or
                 # Instance profile credentials are harder to detect, so we'll try anyway
                 True  # Let the assume role method handle the validation
             )
             if not base_creds_available:
-                logger.warning("Role assumption requested but no obvious base credentials detected. "
-                             "Ensure AWS credentials are available via profile, environment variables, "
-                             "or instance profile.")
+                logger.warning(
+                    "Role assumption requested but no obvious base credentials detected. "
+                    "Ensure AWS credentials are available via profile, environment variables, "
+                    "or instance profile."
+                )
             return self._create_assume_role_session()
         elif web_identity_present:
-            logger.info(f"Creating boto3 session with web identity token: {self.AWS_WEB_IDENTITY_TOKEN_FILE}")
+            logger.info(
+                f"Creating boto3 session with web identity token: {self.AWS_WEB_IDENTITY_TOKEN_FILE}"
+            )
             return self._create_web_identity_session()
         else:
-            logger.info(f"Creating boto3 session with default credentials and region: {self.AWS_REGION}")
-            logger.info("Using default credential chain (instance profile, environment, etc.)")
+            logger.info(
+                f"Creating boto3 session with default credentials and region: {self.AWS_REGION}"
+            )
+            logger.info(
+                "Using default credential chain (instance profile, environment, etc.)"
+            )
             return boto3.Session(region_name=self.AWS_REGION)
 
     def _create_assume_role_session(self) -> boto3.Session:
@@ -228,7 +257,7 @@ class BedrockService(AbstractLLMService):
             # The base session needs existing credentials (profile, env vars, or instance profile)
             base_session = boto3.Session(region_name=self.AWS_REGION)
             sts_client = base_session.client("sts")
-            
+
             # Test that base credentials are available
             try:
                 sts_client.get_caller_identity()
@@ -242,32 +271,36 @@ class BedrockService(AbstractLLMService):
                 error_code = e.response.get("Error", {}).get("Code")
                 if error_code in ["InvalidClientTokenId", "SignatureDoesNotMatch"]:
                     logger.error(f"Invalid base credentials for role assumption: {e}")
-                    raise ConfigurationError(f"Invalid base AWS credentials for role assumption: {e}")
+                    raise ConfigurationError(
+                        f"Invalid base AWS credentials for role assumption: {e}"
+                    )
                 # Other ClientErrors might be acceptable (e.g., permission issues that don't affect role assumption)
-                logger.warning(f"Base credentials check warning (may be acceptable): {e}")
-            
+                logger.warning(
+                    f"Base credentials check warning (may be acceptable): {e}"
+                )
+
             # Prepare assume role parameters
             assume_role_params = {
                 "RoleArn": self.AWS_ROLE_ARN,
                 "RoleSessionName": self.AWS_ROLE_SESSION_NAME,
                 "DurationSeconds": int(os.getenv("AWS_ROLE_SESSION_DURATION", "3600")),
             }
-            
+
             # Add external ID if provided
             if self.AWS_EXTERNAL_ID:
                 assume_role_params["ExternalId"] = self.AWS_EXTERNAL_ID
                 logger.info("Using external ID for role assumption.")
-            
+
             # Assume the role
             logger.info(f"Attempting to assume role: {self.AWS_ROLE_ARN}")
             response = sts_client.assume_role(**assume_role_params)
             credentials = response["Credentials"]
-            
+
             logger.info(
                 f"Successfully assumed role '{self.AWS_ROLE_ARN}'. "
                 f"Session expires at: {credentials['Expiration']}"
             )
-            
+
             # Create session with assumed role credentials
             return boto3.Session(
                 aws_access_key_id=credentials["AccessKeyId"],
@@ -275,7 +308,7 @@ class BedrockService(AbstractLLMService):
                 aws_session_token=credentials["SessionToken"],
                 region_name=self.AWS_REGION,
             )
-            
+
         except ConfigurationError:
             # Re-raise ConfigurationError as-is
             raise
@@ -287,9 +320,11 @@ class BedrockService(AbstractLLMService):
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code")
             error_message = e.response.get("Error", {}).get("Message", str(e))
-            
+
             if error_code == "AccessDenied":
-                logger.error(f"Access denied when assuming role {self.AWS_ROLE_ARN}: {error_message}")
+                logger.error(
+                    f"Access denied when assuming role {self.AWS_ROLE_ARN}: {error_message}"
+                )
                 raise ConfigurationError(
                     f"Access denied when assuming role {self.AWS_ROLE_ARN}. "
                     f"Check role trust policy and permissions: {error_message}"
@@ -305,7 +340,9 @@ class BedrockService(AbstractLLMService):
                     f"Base AWS credentials expired or invalid for role assumption: {error_message}"
                 )
             else:
-                logger.error(f"STS ClientError during role assumption: {error_code} - {error_message}")
+                logger.error(
+                    f"STS ClientError during role assumption: {error_code} - {error_message}"
+                )
                 raise ConfigurationError(
                     f"AWS STS error during role assumption: {error_message} (Code: {error_code})"
                 )
@@ -313,7 +350,9 @@ class BedrockService(AbstractLLMService):
             logger.error(f"BotoCoreError during role assumption: {e}")
             raise ConfigurationError(f"AWS SDK error during role assumption: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error during role assumption: {type(e).__name__} - {e}")
+            logger.error(
+                f"Unexpected error during role assumption: {type(e).__name__} - {e}"
+            )
             raise ConfigurationError(f"Unexpected error during role assumption: {e}")
 
     def _create_web_identity_session(self) -> boto3.Session:
@@ -322,34 +361,41 @@ class BedrockService(AbstractLLMService):
             # For web identity, we rely on boto3's built-in support
             # Set the environment variables that boto3 expects
             import os
+
             original_env = {}
-            
+
             # Temporarily set environment variables for boto3
             env_vars = {
                 "AWS_WEB_IDENTITY_TOKEN_FILE": self.AWS_WEB_IDENTITY_TOKEN_FILE,
                 "AWS_ROLE_ARN": self.AWS_ROLE_ARN or "",
                 "AWS_ROLE_SESSION_NAME": self.AWS_ROLE_SESSION_NAME,
             }
-            
+
             # Validate required parameters
             if not self.AWS_WEB_IDENTITY_TOKEN_FILE:
-                raise ConfigurationError("AWS_WEB_IDENTITY_TOKEN_FILE is required for web identity authentication")
-            
+                raise ConfigurationError(
+                    "AWS_WEB_IDENTITY_TOKEN_FILE is required for web identity authentication"
+                )
+
             if not os.path.exists(self.AWS_WEB_IDENTITY_TOKEN_FILE):
-                raise ConfigurationError(f"Web identity token file not found: {self.AWS_WEB_IDENTITY_TOKEN_FILE}")
-            
+                raise ConfigurationError(
+                    f"Web identity token file not found: {self.AWS_WEB_IDENTITY_TOKEN_FILE}"
+                )
+
             # Set environment variables temporarily
             for key, value in env_vars.items():
                 if value:
                     original_env[key] = os.environ.get(key)
                     os.environ[key] = value
-            
+
             try:
                 session = boto3.Session(region_name=self.AWS_REGION)
                 # Test the session
                 sts_client = session.client("sts")
                 caller_identity = sts_client.get_caller_identity()
-                logger.info(f"Successfully initialized session with web identity token. Account: {caller_identity.get('Account')}")
+                logger.info(
+                    f"Successfully initialized session with web identity token. Account: {caller_identity.get('Account')}"
+                )
                 return session
             finally:
                 # Restore original environment
@@ -358,36 +404,44 @@ class BedrockService(AbstractLLMService):
                         os.environ[key] = original_env[key]
                     elif key in os.environ:
                         del os.environ[key]
-                        
+
         except ConfigurationError:
             # Re-raise ConfigurationError as-is
             raise
         except (NoCredentialsError, PartialCredentialsError) as e:
             logger.error(f"Credentials error with web identity token: {e}")
-            raise ConfigurationError(
-                f"Web identity token authentication failed: {e}"
-            )
+            raise ConfigurationError(f"Web identity token authentication failed: {e}")
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code")
             error_message = e.response.get("Error", {}).get("Message", str(e))
-            
+
             if error_code == "InvalidIdentityToken":
                 logger.error(f"Invalid web identity token: {error_message}")
                 raise ConfigurationError(f"Invalid web identity token: {error_message}")
             elif error_code == "ExpiredToken":
                 logger.error(f"Expired web identity token: {error_message}")
-                raise ConfigurationError(f"Web identity token has expired: {error_message}")
+                raise ConfigurationError(
+                    f"Web identity token has expired: {error_message}"
+                )
             elif error_code == "AccessDenied":
                 logger.error(f"Access denied with web identity token: {error_message}")
-                raise ConfigurationError(f"Access denied with web identity token: {error_message}")
+                raise ConfigurationError(
+                    f"Access denied with web identity token: {error_message}"
+                )
             else:
-                logger.error(f"STS ClientError with web identity token: {error_code} - {error_message}")
-                raise ConfigurationError(f"Web identity authentication error: {error_message} (Code: {error_code})")
+                logger.error(
+                    f"STS ClientError with web identity token: {error_code} - {error_message}"
+                )
+                raise ConfigurationError(
+                    f"Web identity authentication error: {error_message} (Code: {error_code})"
+                )
         except BotoCoreError as e:
             logger.error(f"BotoCoreError with web identity token: {e}")
             raise ConfigurationError(f"AWS SDK error with web identity token: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error with web identity token: {type(e).__name__} - {e}")
+            logger.error(
+                f"Unexpected error with web identity token: {type(e).__name__} - {e}"
+            )
             raise ConfigurationError(f"Unexpected error with web identity token: {e}")
 
     @property
@@ -438,8 +492,8 @@ class BedrockService(AbstractLLMService):
             )
 
     def _prepare_anthropic_claude_messages(
-        self, messages: List[Message]
-    ) -> List[Dict[str, Any]]:
+        self, messages: list[Message]
+    ) -> list[dict[str, Any]]:
         claude_messages = []
         system_prompt = None
         for msg in messages:
@@ -452,10 +506,10 @@ class BedrockService(AbstractLLMService):
 
     def _prepare_amazon_titan_payload(
         self,
-        messages: List[Message],
-        temperature: Optional[float],
-        max_tokens: Optional[int],
-    ) -> Dict[str, Any]:
+        messages: list[Message],
+        temperature: float | None,
+        max_tokens: int | None,
+    ) -> dict[str, Any]:
         # Titan models generally expect a single 'inputText' string.
         # We'll concatenate messages, clearly delineating roles.
         # System prompts are typically prepended.
@@ -487,7 +541,7 @@ class BedrockService(AbstractLLMService):
         return {"inputText": input_text, "textGenerationConfig": text_generation_config}
 
     async def _invoke_anthropic_claude_stream(
-        self, model_id: str, bedrock_payload: Dict[str, Any]
+        self, model_id: str, bedrock_payload: dict[str, Any]
     ) -> AsyncGenerator[ChatCompletionChunk, None]:
         try:
             response_stream = await asyncio.to_thread(
@@ -558,7 +612,7 @@ class BedrockService(AbstractLLMService):
             )
 
     async def _invoke_anthropic_claude_non_stream(
-        self, model_id: str, bedrock_payload: Dict[str, Any]
+        self, model_id: str, bedrock_payload: dict[str, Any]
     ) -> ChatCompletionResponse:
         try:
             response = await asyncio.to_thread(  # Wrap synchronous boto3 call
@@ -600,7 +654,7 @@ class BedrockService(AbstractLLMService):
             )
 
     async def _invoke_amazon_titan_non_stream(
-        self, model_id: str, bedrock_payload: Dict[str, Any]
+        self, model_id: str, bedrock_payload: dict[str, Any]
     ) -> ChatCompletionResponse:
         try:
             response = await asyncio.to_thread(
@@ -666,7 +720,7 @@ class BedrockService(AbstractLLMService):
             )
 
     async def _invoke_amazon_titan_stream(
-        self, model_id: str, bedrock_payload: Dict[str, Any]
+        self, model_id: str, bedrock_payload: dict[str, Any]
     ) -> AsyncGenerator[ChatCompletionChunk, None]:
         try:
             response_stream = await asyncio.to_thread(
@@ -736,13 +790,13 @@ class BedrockService(AbstractLLMService):
 
     async def chat_completion(
         self,
-        messages: List[Message],
-        model_id: Optional[str] = None,
+        messages: list[Message],
+        model_id: str | None = None,
         stream: bool = False,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs,
-    ) -> Union[ChatCompletionResponse, AsyncGenerator[ChatCompletionChunk, None]]:
+    ) -> ChatCompletionResponse | AsyncGenerator[ChatCompletionChunk, None]:
         # Handle the standard interface (messages list)
         if not model_id:
             # This is a programming error if called without model_id from within the system
@@ -794,7 +848,7 @@ class BedrockService(AbstractLLMService):
     async def chat_completion_with_request(
         self,
         request: ChatCompletionRequest,
-    ) -> Union[ChatCompletionResponse, AsyncGenerator[ChatCompletionChunk, None]]:
+    ) -> ChatCompletionResponse | AsyncGenerator[ChatCompletionChunk, None]:
         """
         Handle chat completion with a ChatCompletionRequest DTO.
         This method is used by the API routes.
@@ -804,17 +858,17 @@ class BedrockService(AbstractLLMService):
             kwargs["tools"] = request.tools
         if request.tool_choice:
             kwargs["tool_choice"] = request.tool_choice
-            
+
         return await self.chat_completion(
             messages=request.messages,
             model_id=request.model,
             stream=request.stream or False,
             temperature=request.temperature,
             max_tokens=request.max_tokens,
-            **kwargs
+            **kwargs,
         )
 
-    async def list_models(self) -> List[ModelProviderInfo]:
+    async def list_models(self) -> list[ModelProviderInfo]:
         logger.info(
             f"BedrockService: Fetching foundation models from Bedrock region: {self.AWS_REGION}"
         )

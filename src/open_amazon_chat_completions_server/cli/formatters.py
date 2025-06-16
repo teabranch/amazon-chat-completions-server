@@ -1,11 +1,10 @@
 from rich.console import Console
-from typing import Optional
 
 
 class ChatFormatter:
     """Formats chat messages with rich styling."""
 
-    def __init__(self, console: Optional[Console] = None):
+    def __init__(self, console: Console | None = None):
         self.console = console or Console()
         self.role_styles = {
             "system": "[bold yellow]System[/bold yellow]",

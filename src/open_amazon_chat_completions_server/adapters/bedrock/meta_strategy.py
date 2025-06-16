@@ -1,20 +1,20 @@
 import logging
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
+from ...core.exceptions import UnsupportedFeatureError
 from ...core.models import (
-    Message,
+    ChatCompletionChoice,
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
-    ChatCompletionChoice,
     ChoiceDelta,
-    ChatCompletionChunkChoice,
+    Message,
     Usage,
 )
-from ...core.exceptions import UnsupportedFeatureError
+from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +27,11 @@ class MetaStrategy(BedrockAdapterStrategy):
         logger.info(f"MetaStrategy initialized for model: {self.model_id}")
 
     def _format_messages_to_llama_prompt(
-        self, messages: List[Message], system_prompt: Optional[str]
+        self, messages: list[Message], system_prompt: str | None
     ) -> str:
         """Formats messages into Llama's expected prompt format with special tokens."""
         formatted_parts = []
-        
+
         # Llama uses special tokens for chat format
         if system_prompt:
             formatted_parts.append(f"<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n")
@@ -39,7 +39,7 @@ class MetaStrategy(BedrockAdapterStrategy):
             formatted_parts.append("<s>[INST] ")
 
         conversation_started = False
-        for i, msg in enumerate(messages):
+        for _i, msg in enumerate(messages):
             if msg.role == "system":
                 continue  # Already handled above
             elif msg.role == "user":
@@ -55,7 +55,9 @@ class MetaStrategy(BedrockAdapterStrategy):
                     f"Meta Llama model {self.model_id} received tool role. Formatting as user message."
                 )
                 if conversation_started:
-                    formatted_parts.append(f"<s>[INST] Tool Response: {msg.content} [/INST]")
+                    formatted_parts.append(
+                        f"<s>[INST] Tool Response: {msg.content} [/INST]"
+                    )
                 else:
                     formatted_parts.append(f"Tool Response: {msg.content} [/INST]")
                     conversation_started = True
@@ -68,8 +70,8 @@ class MetaStrategy(BedrockAdapterStrategy):
         return "".join(formatted_parts)
 
     def prepare_request_payload(
-        self, request: ChatCompletionRequest, adapter_config_kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request: ChatCompletionRequest, adapter_config_kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         if request.tools or request.tool_choice:
             raise UnsupportedFeatureError(
                 "Meta Llama models do not support OpenAI-style 'tools' or 'tool_choice' parameters."
@@ -78,7 +80,9 @@ class MetaStrategy(BedrockAdapterStrategy):
         system_prompt, processed_messages = self._extract_system_prompt_and_messages(
             request.messages
         )
-        prompt = self._format_messages_to_llama_prompt(processed_messages, system_prompt)
+        prompt = self._format_messages_to_llama_prompt(
+            processed_messages, system_prompt
+        )
 
         # Meta Llama parameters
         max_gen_len = (
@@ -86,7 +90,7 @@ class MetaStrategy(BedrockAdapterStrategy):
             if request.max_tokens is not None
             else self._get_default_param("max_tokens", default_value=2048)
         )
-        
+
         temperature = (
             request.temperature
             if request.temperature is not None
@@ -103,14 +107,17 @@ class MetaStrategy(BedrockAdapterStrategy):
         llama_params = {
             "top_p": "top_p",
         }
-        
+
         for generic_param, llama_param in llama_params.items():
             value = None
-            if hasattr(request, generic_param) and getattr(request, generic_param) is not None:
+            if (
+                hasattr(request, generic_param)
+                and getattr(request, generic_param) is not None
+            ):
                 value = getattr(request, generic_param)
             elif generic_param in adapter_config_kwargs:
                 value = adapter_config_kwargs[generic_param]
-            
+
             if value is not None:
                 payload[llama_param] = value
 
@@ -118,7 +125,7 @@ class MetaStrategy(BedrockAdapterStrategy):
         return payload
 
     def parse_response(
-        self, provider_response: Dict[str, Any], original_request: ChatCompletionRequest
+        self, provider_response: dict[str, Any], original_request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         # Meta Llama response structure: {"generation": "...", "prompt_token_count": N, "generation_token_count": M, "stop_reason": "..."}
         output_text = provider_response.get("generation", "")
@@ -153,7 +160,7 @@ class MetaStrategy(BedrockAdapterStrategy):
 
     async def handle_stream_chunk(
         self,
-        chunk_data: Dict[str, Any],
+        chunk_data: dict[str, Any],
         original_request: ChatCompletionRequest,
         response_id: str,
         created_timestamp: int,
@@ -161,10 +168,10 @@ class MetaStrategy(BedrockAdapterStrategy):
         # Meta Llama streaming format
         delta_content = None
         finish_reason = None
-        
+
         if "generation" in chunk_data:
             delta_content = chunk_data["generation"]
-        
+
         if "stop_reason" in chunk_data:
             finish_reason = self._map_finish_reason(chunk_data["stop_reason"])
 
@@ -194,4 +201,4 @@ class MetaStrategy(BedrockAdapterStrategy):
             "length": "length",
             "max_gen_len": "length",
         }
-        return mapping.get(provider_reason.lower(), provider_reason) 
+        return mapping.get(provider_reason.lower(), provider_reason)

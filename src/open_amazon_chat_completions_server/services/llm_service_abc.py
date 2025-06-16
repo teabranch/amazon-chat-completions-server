@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List, AsyncGenerator, Optional, Union
+from collections.abc import AsyncGenerator
 
-from ..core.models import Message, ChatCompletionResponse, ChatCompletionChunk
+from ..core.models import ChatCompletionChunk, ChatCompletionResponse, Message
 
 
 class AbstractLLMService(ABC):
@@ -10,15 +10,14 @@ class AbstractLLMService(ABC):
     @abstractmethod
     async def chat_completion(
         self,
-        messages: List[Message],
-        model_id: Optional[
-            str
-        ] = None,  # Model ID might be inherent to the service instance or passed per call
+        messages: list[Message],
+        model_id: str
+        | None = None,  # Model ID might be inherent to the service instance or passed per call
         stream: bool = False,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs,  # For other provider-specific parameters
-    ) -> Union[ChatCompletionResponse, AsyncGenerator[ChatCompletionChunk, None]]:
+    ) -> ChatCompletionResponse | AsyncGenerator[ChatCompletionChunk, None]:
         """
         Sends a chat completion request to the LLM.
 

@@ -1,5 +1,6 @@
 import logging
 import sys
+
 from .config_loader import app_config
 
 

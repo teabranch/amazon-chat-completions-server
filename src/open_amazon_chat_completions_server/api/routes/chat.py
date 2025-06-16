@@ -1,49 +1,57 @@
+import json
+import logging
+from typing import Any
+
 from fastapi import (
     APIRouter,
-    status,
     Depends,
     HTTPException,
     Query,
+    status,
 )
 from fastapi.responses import StreamingResponse
-from typing import Dict, Any, Optional
-import json
-import logging
 from pydantic import ValidationError
-
-from src.open_amazon_chat_completions_server.services.llm_service_factory import (
-    LLMServiceFactory,
-)
-from src.open_amazon_chat_completions_server.services.file_service import get_file_service
-from src.open_amazon_chat_completions_server.services.file_processing_service import get_file_processing_service
 
 # Import custom exceptions from the service layer and core
 from src.open_amazon_chat_completions_server.core.exceptions import (
     ConfigurationError,
+    LLMIntegrationError,
     ModelNotFoundError,
+    ServiceApiError,
     ServiceAuthenticationError,
     ServiceModelNotFoundError,
-    ServiceApiError,
     ServiceUnavailableError,
-    LLMIntegrationError,
 )
 from src.open_amazon_chat_completions_server.core.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
 )
+from src.open_amazon_chat_completions_server.services.file_processing_service import (
+    get_file_processing_service,
+)
+from src.open_amazon_chat_completions_server.services.file_service import (
+    get_file_service,
+)
+from src.open_amazon_chat_completions_server.services.knowledge_base_integration_service import (
+    get_knowledge_base_integration_service,
+)
+from src.open_amazon_chat_completions_server.services.llm_service_factory import (
+    LLMServiceFactory,
+)
+
+from ...adapters.bedrock_to_openai_adapter import BedrockToOpenAIAdapter
+from ...core.bedrock_models import BedrockClaudeRequest, BedrockTitanRequest
+from ...utils.request_detector import RequestFormat, RequestFormatDetector
 
 # Imports for unified logic
 from ..middleware.auth import verify_api_key
-from ...utils.request_detector import RequestFormatDetector, RequestFormat
-from ...adapters.bedrock_to_openai_adapter import BedrockToOpenAIAdapter
-from ...core.bedrock_models import BedrockClaudeRequest, BedrockTitanRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 # Helper function to determine target Bedrock type
-def get_target_bedrock_type(target_format: str) -> Optional[str]:
+def get_target_bedrock_type(target_format: str) -> str | None:
     if "claude" in target_format.lower():
         return "claude"
     if "titan" in target_format.lower():
@@ -53,7 +61,7 @@ def get_target_bedrock_type(target_format: str) -> Optional[str]:
 
 # Service retrieval logic
 def get_service_and_format_details(
-    request_data: Dict[str, Any], target_format_query: Optional[str] = None
+    request_data: dict[str, Any], target_format_query: str | None = None
 ):
     detected_input_format = RequestFormatDetector.detect_format(request_data)
     logger.debug(f"Detected input format: {detected_input_format}")
@@ -106,8 +114,8 @@ def get_service_and_format_details(
     "/v1/chat/completions", dependencies=[Depends(verify_api_key)], response_model=None
 )
 async def unified_chat_completions(
-    request_data: Dict[str, Any],
-    target_format: Optional[str] = Query(
+    request_data: dict[str, Any],
+    target_format: str | None = Query(
         None,
         description="Target response format: openai, bedrock_claude, bedrock_titan. If not specified, defaults to OpenAI or source format if applicable.",
         alias="target_format",
@@ -115,7 +123,7 @@ async def unified_chat_completions(
 ):
     """
     Unified OpenAI-compatible chat completions endpoint.
-    
+
     Handles both streaming and non-streaming requests based on the 'stream' parameter.
     Routes requests based on model_id and supports format conversion.
     """
@@ -180,52 +188,122 @@ async def unified_chat_completions(
             )
             openai_dto_request.model = actual_model_id_for_compute
 
-        # Process files if file_ids are provided
-        if hasattr(openai_dto_request, 'file_ids') and openai_dto_request.file_ids:
-            logger.debug(f"Processing {len(openai_dto_request.file_ids)} files for context")
-            
+        # Initialize Knowledge Base integration service
+        kb_integration_service = get_knowledge_base_integration_service()
+
+        # Check if Knowledge Base functionality should be used
+        kb_id = getattr(
+            openai_dto_request, "knowledge_base_id", None
+        ) or kb_integration_service.detector.extract_knowledge_base_id_from_request(
+            request_data
+        )
+        should_use_direct_rag = await kb_integration_service.should_use_direct_rag(
+            openai_dto_request, kb_id
+        )
+
+        # Handle direct RAG requests (using Bedrock's native retrieve-and-generate)
+        if should_use_direct_rag and kb_id:
             try:
-                file_context = await process_files_for_context(openai_dto_request.file_ids)
-                
+                # Convert model ID to ARN for Bedrock
+                model_arn = f"arn:aws:bedrock:us-east-1::foundation-model/{actual_model_id_for_compute}"
+
+                # Process using native RAG
+                rag_response = await kb_integration_service.process_rag_request(
+                    openai_dto_request, kb_id, model_arn, request_data
+                )
+
+                # Convert to OpenAI format and return
+                openai_response = kb_integration_service.convert_rag_response_to_openai(
+                    rag_response, openai_dto_request
+                )
+                return openai_response
+
+            except Exception as e:
+                logger.error(
+                    f"Direct RAG processing failed, falling back to regular chat: {e}"
+                )
+                # Continue with regular processing
+
+        # Enhance request with Knowledge Base context (if applicable)
+        try:
+            openai_dto_request = await kb_integration_service.enhance_chat_request(
+                openai_dto_request, request_data
+            )
+        except Exception as e:
+            logger.error(
+                f"Knowledge Base enhancement failed, continuing with original request: {e}"
+            )
+
+        # Process files if file_ids are provided
+        if hasattr(openai_dto_request, "file_ids") and openai_dto_request.file_ids:
+            logger.debug(
+                f"Processing {len(openai_dto_request.file_ids)} files for context"
+            )
+
+            try:
+                file_context = await process_files_for_context(
+                    openai_dto_request.file_ids
+                )
+
                 if file_context:
                     # Add file context to the first user message or create a system message
                     if openai_dto_request.messages:
                         # Find the first user message and prepend the file context
                         for i, message in enumerate(openai_dto_request.messages):
                             if message.role == "user":
-                                openai_dto_request.messages[i].content = f"{file_context}\n\n{message.content}"
+                                openai_dto_request.messages[
+                                    i
+                                ].content = f"{file_context}\n\n{message.content}"
                                 break
                         else:
                             # No user message found, add as system message at the beginning
-                            from src.open_amazon_chat_completions_server.core.models import Message
-                            system_message = Message(role="system", content=file_context)
+                            from src.open_amazon_chat_completions_server.core.models import (
+                                Message,
+                            )
+
+                            system_message = Message(
+                                role="system", content=file_context
+                            )
                             openai_dto_request.messages.insert(0, system_message)
-                    
-                    logger.debug(f"Added file context to request ({len(file_context)} characters)")
-                
+
+                    logger.debug(
+                        f"Added file context to request ({len(file_context)} characters)"
+                    )
+
             except Exception as e:
-                logger.error(f"Error processing files, continuing without file context: {e}")
+                logger.error(
+                    f"Error processing files, continuing without file context: {e}"
+                )
                 # Continue with the request even if file processing fails
 
         # Check if this is a streaming request
         is_streaming = openai_dto_request.stream or False
-        
+
         if is_streaming:
             # Handle streaming response
-            logger.debug(f"Processing streaming request for model: {actual_model_id_for_compute}")
-            
+            logger.debug(
+                f"Processing streaming request for model: {actual_model_id_for_compute}"
+            )
+
             async def generate_stream_response():
                 try:
-                    response = await compute_service.chat_completion_with_request(openai_dto_request)
-                    
+                    response = await compute_service.chat_completion_with_request(
+                        openai_dto_request
+                    )
+
                     # For streaming endpoints, we expect an async generator
-                    if not (hasattr(response, '__aiter__') and hasattr(response, '__anext__')):
-                        logger.error("Received non-streaming response from streaming service call")
+                    if not (
+                        hasattr(response, "__aiter__")
+                        and hasattr(response, "__anext__")
+                    ):
+                        logger.error(
+                            "Received non-streaming response from streaming service call"
+                        )
                         raise HTTPException(
                             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="Service configuration error: non-streaming response from streaming endpoint",
                         )
-                    
+
                     openai_stream = response
 
                     target_bedrock_type_for_conversion = None
@@ -288,29 +366,35 @@ async def unified_chat_completions(
             return StreamingResponse(
                 generate_stream_response(), media_type="text/event-stream"
             )
-        
+
         else:
             # Handle non-streaming response
-            logger.debug(f"Processing non-streaming request for model: {actual_model_id_for_compute}")
-            
-            response = await compute_service.chat_completion_with_request(openai_dto_request)
-            
+            logger.debug(
+                f"Processing non-streaming request for model: {actual_model_id_for_compute}"
+            )
+
+            response = await compute_service.chat_completion_with_request(
+                openai_dto_request
+            )
+
             # For non-streaming endpoints, we expect a ChatCompletionResponse object
-            if hasattr(response, '__aiter__') and hasattr(response, '__anext__'):
-                logger.error("Received streaming response from non-streaming service call")
+            if hasattr(response, "__aiter__") and hasattr(response, "__anext__"):
+                logger.error(
+                    "Received streaming response from non-streaming service call"
+                )
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Service configuration error: streaming response from non-streaming endpoint",
                 )
-            
+
             # Ensure we have a proper ChatCompletionResponse object
-            if not hasattr(response, 'id') or not hasattr(response, 'choices'):
+            if not hasattr(response, "id") or not hasattr(response, "choices"):
                 logger.error(f"Invalid response type from service: {type(response)}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Invalid response format from service",
                 )
-            
+
             openai_response_dto: ChatCompletionResponse = response
 
             # Convert response to target format if needed
@@ -360,7 +444,9 @@ async def unified_chat_completions(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except ValidationError as e:
         logger.warning(f"Pydantic validation error in unified endpoint: {e}")
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+        )
     except HTTPException:
         # Re-raise HTTPExceptions without modification
         raise
@@ -383,29 +469,29 @@ async def unified_health():
         "supported_input_formats": ["openai", "bedrock_claude", "bedrock_titan"],
         "model_routing": "enabled",
         "streaming_support": "enabled",
-        "routing_method": "model_id_based"
+        "routing_method": "model_id_based",
     }
 
 
-async def process_files_for_context(file_ids: Optional[list[str]]) -> str:
+async def process_files_for_context(file_ids: list[str] | None) -> str:
     """
     Process uploaded files and return their content as context for the chat completion.
-    
+
     Args:
         file_ids: List of file IDs to process
-        
+
     Returns:
         Formatted string containing file contents for context
     """
     if not file_ids:
         return ""
-    
+
     try:
         file_service = get_file_service()
         file_processing_service = get_file_processing_service()
-        
+
         file_contexts = []
-        
+
         for file_id in file_ids:
             try:
                 # Get file metadata and content
@@ -413,39 +499,49 @@ async def process_files_for_context(file_ids: Optional[list[str]]) -> str:
                 if not metadata:
                     logger.warning(f"File {file_id} not found, skipping")
                     continue
-                
+
                 content = await file_service.get_file_content(file_id)
                 if not content:
                     logger.warning(f"No content found for file {file_id}, skipping")
                     continue
-                
+
                 # Process the file content
                 processed_result = await file_processing_service.process_file(
                     content, metadata.content_type, metadata.filename
                 )
-                
+
                 if processed_result["success"]:
-                    file_contexts.append(f"=== File: {metadata.filename} (ID: {file_id}) ===\n{processed_result['text_content']}\n")
+                    file_contexts.append(
+                        f"=== File: {metadata.filename} (ID: {file_id}) ===\n{processed_result['text_content']}\n"
+                    )
                 else:
-                    logger.warning(f"Failed to process file {file_id}: {processed_result.get('error', 'Unknown error')}")
+                    logger.warning(
+                        f"Failed to process file {file_id}: {processed_result.get('error', 'Unknown error')}"
+                    )
                     # Still include basic info if processing fails
-                    file_contexts.append(f"=== File: {metadata.filename} (ID: {file_id}) ===\n[File content could not be processed: {processed_result.get('error', 'Unknown error')}]\n")
-                    
+                    file_contexts.append(
+                        f"=== File: {metadata.filename} (ID: {file_id}) ===\n[File content could not be processed: {processed_result.get('error', 'Unknown error')}]\n"
+                    )
+
             except Exception as e:
                 logger.error(f"Error processing file {file_id}: {e}")
-                file_contexts.append(f"=== File: {file_id} ===\n[Error processing file: {str(e)}]\n")
-        
+                file_contexts.append(
+                    f"=== File: {file_id} ===\n[Error processing file: {str(e)}]\n"
+                )
+
         if file_contexts:
-            return "\n".join([
-                "=== UPLOADED FILES CONTEXT ===",
-                "The following files have been uploaded and their content is provided below for your reference:",
-                "",
-                *file_contexts,
-                "=== END OF FILES CONTEXT ===\n"
-            ])
+            return "\n".join(
+                [
+                    "=== UPLOADED FILES CONTEXT ===",
+                    "The following files have been uploaded and their content is provided below for your reference:",
+                    "",
+                    *file_contexts,
+                    "=== END OF FILES CONTEXT ===\n",
+                ]
+            )
         else:
             return ""
-            
+
     except Exception as e:
         logger.error(f"Error processing files for context: {e}")
         return f"\n=== FILE PROCESSING ERROR ===\nError processing uploaded files: {str(e)}\n=== END ERROR ===\n"

@@ -1,5 +1,5 @@
-from typing import Dict, Any
 import logging
+from typing import Any
 
 from ..core.bedrock_models import RequestFormat
 
@@ -10,7 +10,7 @@ class RequestFormatDetector:
     """Utility class for detecting the format of incoming requests"""
 
     @staticmethod
-    def detect_format(request_data: Dict[str, Any]) -> RequestFormat:
+    def detect_format(request_data: dict[str, Any]) -> RequestFormat:
         """
         Detect the format of incoming request based on its structure and fields.
 
@@ -43,7 +43,7 @@ class RequestFormatDetector:
         return RequestFormat.UNKNOWN
 
     @staticmethod
-    def is_openai_format(request_data: Dict[str, Any]) -> bool:
+    def is_openai_format(request_data: dict[str, Any]) -> bool:
         """
         Check if request follows OpenAI Chat Completions format.
 
@@ -99,13 +99,10 @@ class RequestFormatDetector:
             return True
 
         # If has messages and OpenAI-specific indicators but no model, still likely OpenAI
-        if has_messages and (has_openai_tools or has_openai_params):
-            return True
-
-        return False
+        return bool(has_messages and (has_openai_tools or has_openai_params))
 
     @staticmethod
-    def is_bedrock_claude_format(request_data: Dict[str, Any]) -> bool:
+    def is_bedrock_claude_format(request_data: dict[str, Any]) -> bool:
         """
         Check if request follows Bedrock Claude format.
 
@@ -157,17 +154,10 @@ class RequestFormatDetector:
             return True
 
         # Combination of max_tokens + messages + Claude-specific features
-        if (
-            has_max_tokens
-            and has_messages
-            and (has_claude_fields or has_claude_tools or has_claude_tool_choice)
-        ):
-            return True
-
-        return False
+        return bool(has_max_tokens and has_messages and (has_claude_fields or has_claude_tools or has_claude_tool_choice))
 
     @staticmethod
-    def is_bedrock_titan_format(request_data: Dict[str, Any]) -> bool:
+    def is_bedrock_titan_format(request_data: dict[str, Any]) -> bool:
         """
         Check if request follows Bedrock Titan format.
 
@@ -202,14 +192,14 @@ class RequestFormatDetector:
 
     @staticmethod
     def get_format_confidence(
-        request_data: Dict[str, Any],
-    ) -> Dict[RequestFormat, float]:
+        request_data: dict[str, Any],
+    ) -> dict[RequestFormat, float]:
         """
         Get confidence scores for each format type.
         Useful for debugging and logging.
         """
         if not isinstance(request_data, dict):
-            return {format_type: 0.0 for format_type in RequestFormat}
+            return dict.fromkeys(RequestFormat, 0.0)
 
         confidence = {
             RequestFormat.OPENAI: 0.0,

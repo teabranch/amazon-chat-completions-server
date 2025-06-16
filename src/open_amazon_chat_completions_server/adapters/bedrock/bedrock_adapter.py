@@ -1,30 +1,31 @@
 import logging
 import time
 import uuid
-from typing import Any, AsyncGenerator, Dict
+from collections.abc import AsyncGenerator
+from typing import Any
 
-from ..base_adapter import BaseLLMAdapter
+from ...core.exceptions import APIRequestError, ConfigurationError, ModelNotFoundError
 from ...core.models import (
+    ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
 )
-from ...core.exceptions import ConfigurationError, ModelNotFoundError, APIRequestError
 from ...utils.api_client import APIClient
 from ...utils.config_loader import app_config
+from ..base_adapter import BaseLLMAdapter
+from .ai21_strategy import AI21Strategy
+from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
 from .bedrock_models import (
     get_bedrock_model_id,
 )  # To map generic names to specific Bedrock IDs
-from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
 from .claude_strategy import ClaudeStrategy
-from .titan_strategy import TitanStrategy
-from .ai21_strategy import AI21Strategy
 from .cohere_strategy import CohereStrategy
 from .meta_strategy import MetaStrategy
 from .mistral_strategy import MistralStrategy
-from .stability_strategy import StabilityStrategy
-from .writer_strategy import WriterStrategy
 from .nova_strategy import NovaStrategy
+from .stability_strategy import StabilityStrategy
+from .titan_strategy import TitanStrategy
+from .writer_strategy import WriterStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +86,15 @@ class BedrockAdapter(BaseLLMAdapter):
             return WriterStrategy(bedrock_model_id, get_param_func)
         else:
             supported_prefixes = [
-                "anthropic.claude", "amazon.titan", "amazon.nova", "ai21.", 
-                "cohere.", "meta.", "mistral.", "stability.", "writer."
+                "anthropic.claude",
+                "amazon.titan",
+                "amazon.nova",
+                "ai21.",
+                "cohere.",
+                "meta.",
+                "mistral.",
+                "stability.",
+                "writer.",
             ]
             logger.error(
                 f"Unsupported Bedrock model ID: {bedrock_model_id}. Supported prefixes: {supported_prefixes}"
@@ -97,7 +105,7 @@ class BedrockAdapter(BaseLLMAdapter):
 
     def convert_to_provider_request(
         self, request: ChatCompletionRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Delegates to the strategy to convert to Bedrock-specific request body."""
         # The specific_bedrock_model_id is what the APIClient and strategy will use.
         # The original request.model might be the generic name.
@@ -105,14 +113,14 @@ class BedrockAdapter(BaseLLMAdapter):
         return self.strategy.prepare_request_payload(request, self.config_kwargs)
 
     def convert_from_provider_response(
-        self, provider_response: Dict[str, Any], original_request: ChatCompletionRequest
+        self, provider_response: dict[str, Any], original_request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         """Delegates to the strategy to parse Bedrock response."""
         return self.strategy.parse_response(provider_response, original_request)
 
     def convert_from_provider_stream_chunk(
         self,
-        provider_chunk: Dict[str, Any],
+        provider_chunk: dict[str, Any],
         original_request: ChatCompletionRequest,
         response_id: str,
         created_timestamp: int,

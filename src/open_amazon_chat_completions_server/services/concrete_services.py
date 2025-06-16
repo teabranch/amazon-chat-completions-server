@@ -1,17 +1,18 @@
 import logging
-from typing import List, AsyncGenerator, Optional, Union, Any, Dict
+from collections.abc import AsyncGenerator
+from typing import Any
 
-from .llm_service_abc import AbstractLLMService
-from ..core.models import (
-    Message,
-    ChatCompletionResponse,
-    ChatCompletionChunk,
-    ChatCompletionRequest,
-)
 from ..adapters.base_adapter import (
     BaseLLMAdapter,
 )  # OpenAIAdapter and BedrockAdapter inherit from this
-from ..core.exceptions import LLMIntegrationError, APIRequestError
+from ..core.exceptions import APIRequestError, LLMIntegrationError
+from ..core.models import (
+    ChatCompletionChunk,
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    Message,
+)
+from .llm_service_abc import AbstractLLMService
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +33,16 @@ class ConcreteLLMService(AbstractLLMService):
 
     async def chat_completion(
         self,
-        messages: List[Message],
-        model_id: Optional[
-            str
-        ] = None,  # If provided, can override adapter's default, though adapter is typically model-specific
+        messages: list[Message],
+        model_id: str
+        | None = None,  # If provided, can override adapter's default, though adapter is typically model-specific
         stream: bool = False,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
-        tools: Optional[List[Dict[str, Any]]] = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        tool_choice: str | dict[str, Any] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,  # Provider-specific parameters not in ChatCompletionRequest model
-    ) -> Union[ChatCompletionResponse, AsyncGenerator[ChatCompletionChunk, None]]:
+    ) -> ChatCompletionResponse | AsyncGenerator[ChatCompletionChunk, None]:
         """
         Sends a chat completion request using the configured adapter.
         """

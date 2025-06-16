@@ -1,21 +1,21 @@
 import logging
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
+from ...core.exceptions import APIRequestError
 from ...core.models import (
-    Message,
+    ChatCompletionChoice,
+    ChatCompletionChunk,
+    ChatCompletionChunkChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionChunk,
-    ChatCompletionChoice,
     ChoiceDelta,
-    ChatCompletionChunkChoice,
+    Message,
     Usage,
 )
-from ...core.exceptions import APIRequestError
 from ...utils.config_loader import app_config
+from .bedrock_adapter_strategy_abc import BedrockAdapterStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ class ClaudeStrategy(BedrockAdapterStrategy):
         )
 
     def prepare_request_payload(
-        self, request: ChatCompletionRequest, adapter_config_kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request: ChatCompletionRequest, adapter_config_kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         system_prompt, processed_messages = self._extract_system_prompt_and_messages(
             request.messages
         )
@@ -102,7 +102,7 @@ class ClaudeStrategy(BedrockAdapterStrategy):
         return payload
 
     def parse_response(
-        self, provider_response: Dict[str, Any], original_request: ChatCompletionRequest
+        self, provider_response: dict[str, Any], original_request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         response_id = provider_response.get("id", f"bedrock-claude-{uuid.uuid4()}")
         model_used = provider_response.get("model", self.model_id)
@@ -126,11 +126,12 @@ class ClaudeStrategy(BedrockAdapterStrategy):
                     "function": {"name": block["name"], "arguments": block["input"]},
                 }
                 assistant_tool_calls.append(tool_call_data)
-                if stop_reason != "tool_calls":
-                    if provider_response.get("stop_reason") == "tool_use":
-                        stop_reason = "tool_calls"
-                    elif assistant_tool_calls and stop_reason != "length":
-                        stop_reason = "tool_calls"
+                if stop_reason != "tool_calls" and (
+                    provider_response.get("stop_reason") == "tool_use"
+                    or assistant_tool_calls
+                    and stop_reason != "length"
+                ):
+                    stop_reason = "tool_calls"
 
         message = Message(
             role="assistant",
@@ -163,16 +164,16 @@ class ClaudeStrategy(BedrockAdapterStrategy):
 
     async def handle_stream_chunk(
         self,
-        chunk_data: Dict[str, Any],
+        chunk_data: dict[str, Any],
         original_request: ChatCompletionRequest,
         response_id: str,
         created_timestamp: int,
     ) -> ChatCompletionChunk:
         chunk_type = chunk_data.get("type")
-        delta_content: Optional[str] = None
-        finish_reason: Optional[str] = None
-        delta_role: Optional[str] = None
-        chunk_tool_calls: Optional[List[Dict[str, Any]]] = None
+        delta_content: str | None = None
+        finish_reason: str | None = None
+        delta_role: str | None = None
+        chunk_tool_calls: list[dict[str, Any]] | None = None
         index = chunk_data.get("index", 0)
 
         if chunk_type == "content_block_delta":
