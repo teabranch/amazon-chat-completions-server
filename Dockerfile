@@ -21,6 +21,13 @@ RUN pip install --no-cache-dir uv==0.6.6
 # Set the working directory
 WORKDIR /app
 
+# Accept version as build argument with default fallback
+ARG VERSION=0.1.0
+ENV HATCH_BUILD_NO_VCS=true
+
+# Set the version for setuptools-scm as a fallback
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=${VERSION}
+
 # Copy dependency files first for better layer caching
 COPY pyproject.toml uv.lock LICENSE ./
 
@@ -30,15 +37,9 @@ COPY src ./src
 # Create a minimal README.md for setuptools if needed
 RUN echo "# Open Bedrock Server" > README.md
 
-# Accept version as build argument
-ARG VERSION
-ENV HATCH_BUILD_NO_VCS=true
-
-# Create version file if VERSION is provided
-RUN if [ -n "$VERSION" ]; then \
-    mkdir -p src/open_bedrock_server && \
-    echo "__version__ = \"$VERSION\"" > src/open_bedrock_server/_version.py; \
-    fi
+# Create version file with the specified VERSION
+RUN mkdir -p src/open_bedrock_server && \
+    echo "__version__ = \"$VERSION\"" > src/open_bedrock_server/_version.py
 
 # Install dependencies in a virtual environment
 RUN uv venv /app/.venv
