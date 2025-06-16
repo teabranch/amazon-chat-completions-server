@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=64", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-bedrock-server"
@@ -72,19 +72,12 @@ dev = [
 [project.scripts]
 bedrock-chat = "open_bedrock_server.cli.main:cli"
 
-[tool.hatch.version]
-path = "VERSION"
-pattern = "(?P<version>.+)"
+[tool.setuptools]
+packages = ["open_bedrock_server"]
+package-dir = {"" = "src"}
 
-[tool.hatch.build.targets.sdist]
-include = [
-    "/src/open_bedrock_server",
-    "/README.md",
-    "/LICENSE",
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/open_bedrock_server"]
+[tool.setuptools-scm]
+write_to = "src/open_bedrock_server/_version.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
