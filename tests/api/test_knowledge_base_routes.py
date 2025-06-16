@@ -8,14 +8,13 @@ from httpx import ASGITransport, AsyncClient
 from src.open_bedrock_server.api.app import app
 from src.open_bedrock_server.core.knowledge_base_models import (
     Citation,
-    DataSource,
-    DataSourceList,
-    KnowledgeBase,
-    KnowledgeBaseHealth,
-    KnowledgeBaseList,
+    DataSourceInfo,
+    KnowledgeBaseInfo,
     KnowledgeBaseQueryResponse,
-    RAGResponse,
+    ListDataSourcesResponse,
+    ListKnowledgeBasesResponse,
     RetrievalResult,
+    RetrieveAndGenerateResponse,
 )
 
 
@@ -51,12 +50,19 @@ class TestKnowledgeBaseRoutes:
     @pytest.fixture
     def sample_knowledge_base(self):
         """Sample knowledge base for testing."""
-        return KnowledgeBase(
-            knowledge_base_id="kb-123456789",
+        return KnowledgeBaseInfo(
+            knowledgeBaseId="kb-123456789",
             name="test-kb",
             description="Test knowledge base",
-            role_arn="arn:aws:iam::123456789012:role/test-role",
-            storage_configuration={
+            knowledgeBaseArn="arn:aws:bedrock:us-east-1:123456789012:knowledge-base/kb-123456789",
+            roleArn="arn:aws:iam::123456789012:role/test-role",
+            knowledgeBaseConfiguration={
+                "type": "VECTOR",
+                "vectorKnowledgeBaseConfiguration": {
+                    "embeddingModelArn": "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1"
+                }
+            },
+            storageConfiguration={
                 "type": "OPENSEARCH_SERVERLESS",
                 "opensearchServerlessConfiguration": {
                     "collectionArn": "arn:aws:aoss:us-east-1:123456789012:collection/test-collection",
@@ -69,8 +75,8 @@ class TestKnowledgeBaseRoutes:
                 },
             },
             status="ACTIVE",
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            createdAt=datetime.now(),
+            updatedAt=datetime.now(),
         )
 
     @pytest.mark.asyncio
@@ -105,7 +111,7 @@ class TestKnowledgeBaseRoutes:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["knowledge_base_id"] == "kb-123456789"
+        assert data["knowledgeBaseId"] == "kb-123456789"
         assert data["name"] == "test-kb"
         assert data["status"] == "ACTIVE"
 
@@ -168,7 +174,7 @@ class TestKnowledgeBaseRoutes:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["knowledge_base_id"] == "kb-123456789"
+        assert data["knowledgeBaseId"] == "kb-123456789"
         assert data["name"] == "test-kb"
 
         mock_kb_service.get_knowledge_base.assert_called_once_with("kb-123456789")
@@ -195,8 +201,8 @@ class TestKnowledgeBaseRoutes:
         self, client: AsyncClient, auth_headers, mock_kb_service, sample_knowledge_base
     ):
         """Test successful knowledge base listing."""
-        kb_list = KnowledgeBaseList(
-            knowledge_bases=[sample_knowledge_base], next_token=None
+        kb_list = ListKnowledgeBasesResponse(
+            knowledgeBaseSummaries=[sample_knowledge_base], nextToken=None
         )
         mock_kb_service.list_knowledge_bases.return_value = kb_list
 
@@ -204,9 +210,9 @@ class TestKnowledgeBaseRoutes:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert "knowledge_bases" in data
-        assert len(data["knowledge_bases"]) == 1
-        assert data["knowledge_bases"][0]["knowledge_base_id"] == "kb-123456789"
+        assert "knowledgeBaseSummaries" in data
+        assert len(data["knowledgeBaseSummaries"]) == 1
+        assert data["knowledgeBaseSummaries"][0]["knowledgeBaseId"] == "kb-123456789"
 
         mock_kb_service.list_knowledge_bases.assert_called_once()
 
@@ -215,7 +221,7 @@ class TestKnowledgeBaseRoutes:
         self, client: AsyncClient, auth_headers, mock_kb_service
     ):
         """Test knowledge base listing with pagination."""
-        kb_list = KnowledgeBaseList(knowledge_bases=[], next_token="next-page-token")
+        kb_list = ListKnowledgeBasesResponse(knowledgeBaseSummaries=[], nextToken="next-page-token")
         mock_kb_service.list_knowledge_bases.return_value = kb_list
 
         response = await client.get(
@@ -224,7 +230,7 @@ class TestKnowledgeBaseRoutes:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["next_token"] == "next-page-token"
+        assert data["nextToken"] == "next-page-token"
 
         mock_kb_service.list_knowledge_bases.assert_called_once_with(
             limit=10, next_token="some-token"

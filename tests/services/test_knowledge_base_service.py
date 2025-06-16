@@ -4,12 +4,10 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.open_bedrock_server.core.knowledge_base_models import (
-    DataSourceCreate,
-    KnowledgeBaseCreate,
-    KnowledgeBaseQuery,
-    KnowledgeBaseUpdate,
-    RAGRequest,
-    RetrievalConfig,
+    CreateDataSourceRequest,
+    CreateKnowledgeBaseRequest,
+    KnowledgeBaseQueryRequest,
+    RetrieveAndGenerateRequest,
 )
 from src.open_bedrock_server.services.knowledge_base_service import (
     KnowledgeBaseService,
@@ -107,11 +105,17 @@ class TestKnowledgeBaseService:
             "knowledgeBase": sample_kb_data
         }
 
-        create_request = KnowledgeBaseCreate(
+        create_request = CreateKnowledgeBaseRequest(
             name="test-kb",
             description="Test knowledge base",
-            role_arn="arn:aws:iam::123456789012:role/test-role",
-            storage_configuration={
+            roleArn="arn:aws:iam::123456789012:role/test-role",
+            knowledgeBaseConfiguration={
+                "type": "VECTOR",
+                "vectorKnowledgeBaseConfiguration": {
+                    "embeddingModelArn": "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1"
+                }
+            },
+            storageConfiguration={
                 "type": "OPENSEARCH_SERVERLESS",
                 "opensearchServerlessConfiguration": {
                     "collectionArn": "arn:aws:aoss:us-east-1:123456789012:collection/test-collection",
@@ -151,8 +155,15 @@ class TestKnowledgeBaseService:
             operation_name="CreateKnowledgeBase",
         )
 
-        create_request = KnowledgeBaseCreate(
-            name="test-kb", role_arn="invalid-arn", storage_configuration={}
+        create_request = CreateKnowledgeBaseRequest(
+            name="test-kb", 
+            roleArn="invalid-arn", 
+            knowledgeBaseConfiguration={
+                "type": "VECTOR",
+                "vectorKnowledgeBaseConfiguration": {
+                    "embeddingModelArn": "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1"
+                }
+            }
         )
 
         with pytest.raises(Exception) as exc_info:
