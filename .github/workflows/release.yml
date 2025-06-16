@@ -45,9 +45,11 @@ jobs:
           pip install build twine
 
       - name: Build package
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          # Set version for build
-          export SETUPTOOLS_SCM_PRETEND_VERSION="${{ steps.version.outputs.version }}"
+          # Build package with version from tag
+          echo "Building with version: $SETUPTOOLS_SCM_PRETEND_VERSION"
           python -m build
 
       - name: Publish to PyPI
