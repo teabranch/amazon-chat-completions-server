@@ -1,0 +1,179 @@
+name: Auto Version Management
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'VERSION'
+      - '**.md'
+      - '.github/**'
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+        - auto
+        - patch
+        - minor
+        - major
+      skip_release:
+        description: 'Skip creating GitHub release'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  auto-version:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Get current version
+        id: current
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Get latest tag
+        id: latest_tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest tag: $LATEST_TAG"
+
+      - name: Analyze commits for version bump
+        id: analyze
+        run: |
+          LATEST_TAG="${{ steps.latest_tag.outputs.latest_tag }}"
+          BUMP_TYPE="${{ github.event.inputs.version_bump || 'auto' }}"
+          
+          if [[ "$BUMP_TYPE" != "auto" ]]; then
+            echo "Manual bump type specified: $BUMP_TYPE"
+            echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+            echo "should_bump=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # If no previous tag, default to patch
+          if [[ -z "$LATEST_TAG" ]]; then
+            echo "No previous tag found, defaulting to patch"
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "should_bump=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Get commits since last tag
+          COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline --no-merges)
+          
+          if [[ -z "$COMMITS" ]]; then
+            echo "No new commits since last tag"
+            echo "should_bump=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Commits since $LATEST_TAG:"
+          echo "$COMMITS"
+          
+          # Analyze commits for conventional commit patterns
+          MAJOR_PATTERN="BREAKING CHANGE|breaking change|!:"
+          MINOR_PATTERN="^feat(\(.+\))?\!?:"
+          PATCH_PATTERN="^fix(\(.+\))?\!?:|^perf(\(.+\))?\!?:"
+          
+          if echo "$COMMITS" | grep -qE "$MAJOR_PATTERN"; then
+            echo "Breaking changes detected -> major bump"
+            echo "bump_type=major" >> $GITHUB_OUTPUT
+          elif echo "$COMMITS" | grep -qiE "$MINOR_PATTERN"; then
+            echo "Features detected -> minor bump"
+            echo "bump_type=minor" >> $GITHUB_OUTPUT
+          elif echo "$COMMITS" | grep -qiE "$PATCH_PATTERN"; then
+            echo "Fixes detected -> patch bump"
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "No conventional commits found -> patch bump"
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "should_bump=true" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        id: bump
+        if: steps.analyze.outputs.should_bump == 'true'
+        run: |
+          BUMP_TYPE="${{ steps.analyze.outputs.bump_type }}"
+          echo "Bumping version with type: $BUMP_TYPE"
+          
+          python scripts/bump_version.py --bump $BUMP_TYPE
+          
+          NEW_VERSION=$(cat VERSION)
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Commit version bump
+        if: steps.analyze.outputs.should_bump == 'true'
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add VERSION
+          git commit -m "Bump version to $NEW_VERSION"
+
+      - name: Create and push tag
+        if: steps.analyze.outputs.should_bump == 'true'
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+          git tag $NEW_VERSION
+          git push origin main
+          git push origin $NEW_VERSION
+
+      - name: Create GitHub Release
+        if: steps.analyze.outputs.should_bump == 'true' && github.event.inputs.skip_release != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump.outputs.new_version }}
+          name: Release ${{ steps.bump.outputs.new_version }}
+          body: |
+            ## Changes
+            
+            Auto-generated release for version ${{ steps.bump.outputs.new_version }}
+            
+            ### Commits since last release:
+            ${{ steps.analyze.outputs.commits }}
+            
+            ## Installation
+            
+            ```bash
+            pip install open-bedrock-server==${{ steps.bump.outputs.new_version }}
+            ```
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: steps.analyze.outputs.should_bump == 'true'
+        run: |
+          echo "🚀 Successfully bumped version to ${{ steps.bump.outputs.new_version }}"
+          echo "📦 PyPI and Docker publishing workflows will be triggered by the release"
+        
+      - name: No version bump needed
+        if: steps.analyze.outputs.should_bump != 'true'
+        run: |
+          echo "ℹ️ No version bump needed - no significant changes detected" 

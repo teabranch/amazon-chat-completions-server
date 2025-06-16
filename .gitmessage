@@ -1,0 +1,25 @@
+# <type>[optional scope]: <description>
+#
+# [optional body]
+#
+# [optional footer(s)]
+#
+# Types:
+#   feat:     A new feature (minor version bump)
+#   fix:      A bug fix (patch version bump)  
+#   perf:     Performance improvement (patch version bump)
+#   docs:     Documentation only changes (no version bump)
+#   style:    Code style changes (no version bump)
+#   refactor: Code refactoring (no version bump)
+#   test:     Adding/updating tests (no version bump)
+#   chore:    Maintenance tasks (no version bump)
+#
+# Breaking changes: Add ! after type (e.g., feat!:) or include BREAKING CHANGE: in footer (major version bump)
+#
+# Examples:
+#   feat: add streaming response support
+#   fix: resolve authentication timeout issue
+#   feat!: redesign API with new authentication
+#   feat: add new endpoint
+#   
+#   BREAKING CHANGE: removes deprecated /v1/chat endpoint 
