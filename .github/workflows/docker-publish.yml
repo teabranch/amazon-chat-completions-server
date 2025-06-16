@@ -22,6 +22,40 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for hatch-vcs
+
+      - name: Set up Python (for hatch version)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install hatch
+        run: |
+          pip install uv
+          uv tool install hatch
+
+      - name: Get version from hatch
+        id: version
+        run: |
+          VERSION=$(hatch version)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Verify version for release
+        run: |
+          # Verify hatch version matches release tag
+          HATCH_VERSION="${{ steps.version.outputs.version }}"
+          GITHUB_TAG=${GITHUB_REF#refs/tags/}
+          echo "Hatch version: $HATCH_VERSION"
+          echo "GitHub release tag: $GITHUB_TAG"
+          if [[ "$GITHUB_TAG" == "v$HATCH_VERSION" ]] || [[ "$GITHUB_TAG" == "$HATCH_VERSION" ]]; then
+            echo "✅ Version consistency verified: $HATCH_VERSION"
+          else
+            echo "❌ Version mismatch! Hatch: $HATCH_VERSION, Tag: $GITHUB_TAG"
+            exit 1
+          fi
+        if: github.event_name == 'release'
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -49,7 +83,7 @@ jobs:
             # For main branch, use 'latest' and commit SHA
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
             type=sha,format=short,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
-            # For releases, use semantic versioning (this ensures version consistency)
+            # For releases, use semantic versioning (this ensures version consistency with hatch)
             type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
             type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }}
@@ -64,3 +98,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
