@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from src.open_amazon_chat_completions_server.core.knowledge_base_models import (
+from src.open_bedrock_server.core.knowledge_base_models import (
     ChunkingConfiguration,
     Citation,
     CreateDataSourceRequest,

@@ -2,10 +2,10 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ModelProviderInfo,
 )  # Core model from service
-from src.open_amazon_chat_completions_server.services.llm_service_factory import (
+from src.open_bedrock_server.services.llm_service_factory import (
     LLMServiceFactory,
 )
 

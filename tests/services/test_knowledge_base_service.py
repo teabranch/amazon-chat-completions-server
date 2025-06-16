@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.open_amazon_chat_completions_server.core.knowledge_base_models import (
+from src.open_bedrock_server.core.knowledge_base_models import (
     DataSourceCreate,
     KnowledgeBaseCreate,
     KnowledgeBaseQuery,
@@ -11,7 +11,7 @@ from src.open_amazon_chat_completions_server.core.knowledge_base_models import (
     RAGRequest,
     RetrievalConfig,
 )
-from src.open_amazon_chat_completions_server.services.knowledge_base_service import (
+from src.open_bedrock_server.services.knowledge_base_service import (
     KnowledgeBaseService,
 )
 
@@ -42,7 +42,7 @@ class TestKnowledgeBaseService:
     def knowledge_base_service(self, mock_bedrock_client):
         """Create KnowledgeBaseService with mocked clients."""
         with patch(
-            "src.open_amazon_chat_completions_server.services.knowledge_base_service.boto3.client"
+            "src.open_bedrock_server.services.knowledge_base_service.boto3.client"
         ) as mock_client:
             mock_client.return_value = mock_bedrock_client
             service = KnowledgeBaseService(region="us-east-1")
@@ -280,7 +280,7 @@ class TestKnowledgeBaseService:
     async def test_query_knowledge_base_success(self, knowledge_base_service):
         """Test successful knowledge base query."""
         with patch(
-            "src.open_amazon_chat_completions_server.services.knowledge_base_service.boto3.client"
+            "src.open_bedrock_server.services.knowledge_base_service.boto3.client"
         ) as mock_client:
             mock_runtime = Mock()
             mock_client.return_value = mock_runtime
@@ -317,7 +317,7 @@ class TestKnowledgeBaseService:
     async def test_retrieve_and_generate_success(self, knowledge_base_service):
         """Test successful retrieve and generate."""
         with patch(
-            "src.open_amazon_chat_completions_server.services.knowledge_base_service.boto3.client"
+            "src.open_bedrock_server.services.knowledge_base_service.boto3.client"
         ) as mock_client:
             mock_runtime = Mock()
             mock_client.return_value = mock_runtime
@@ -571,7 +571,7 @@ class TestKnowledgeBaseService:
     async def test_query_with_custom_retrieval_config(self, knowledge_base_service):
         """Test query with custom retrieval configuration."""
         with patch(
-            "src.open_amazon_chat_completions_server.services.knowledge_base_service.boto3.client"
+            "src.open_bedrock_server.services.knowledge_base_service.boto3.client"
         ) as mock_client:
             mock_runtime = Mock()
             mock_client.return_value = mock_runtime

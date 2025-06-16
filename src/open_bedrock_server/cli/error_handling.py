@@ -29,7 +29,7 @@ class CLIErrorHandler:
 
     def _handle_auth_error(self, error: requests.HTTPError):
         self.console.print("[bold red]Authentication Error[/bold red]")
-        self.console.print("Please check your API key or run 'amazon-chat config set'")
+        self.console.print("Please check your API key or run 'bedrock-chat config set'")
 
     def _handle_not_found(self, error: requests.HTTPError):
         self.console.print("[bold red]Not Found Error[/bold red]")

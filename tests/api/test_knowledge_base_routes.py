@@ -5,8 +5,8 @@ import pytest
 from fastapi import status
 from httpx import ASGITransport, AsyncClient
 
-from src.open_amazon_chat_completions_server.api.app import app
-from src.open_amazon_chat_completions_server.core.knowledge_base_models import (
+from src.open_bedrock_server.api.app import app
+from src.open_bedrock_server.core.knowledge_base_models import (
     Citation,
     DataSource,
     DataSourceList,
@@ -42,7 +42,7 @@ class TestKnowledgeBaseRoutes:
     def mock_kb_service(self):
         """Mock KnowledgeBaseService for testing."""
         with patch(
-            "src.open_amazon_chat_completions_server.api.routes.knowledge_bases.KnowledgeBaseService"
+            "src.open_bedrock_server.api.routes.knowledge_bases.KnowledgeBaseService"
         ) as mock_service:
             mock_instance = Mock()
             mock_service.return_value = mock_instance

@@ -22,7 +22,7 @@ Complete guide for setting up AWS credentials and authentication for Amazon Bedr
 
 ## Overview
 
-The Amazon Chat Completions Server supports multiple AWS authentication methods to access Amazon Bedrock models. This guide covers all available authentication options and best practices for different deployment scenarios.
+The Open Bedrock Server Server supports multiple AWS authentication methods to access Amazon Bedrock models. This guide covers all available authentication options and best practices for different deployment scenarios.
 
 ## Authentication Methods
 
@@ -215,7 +215,7 @@ export AWS_PROFILE=bedrock-dev
 export AWS_REGION=us-east-1
 
 # Start server
-amazon-chat serve
+bedrock-chat serve
 ```
 
 **Option 2: Environment Variables**
@@ -226,7 +226,7 @@ export AWS_SECRET_ACCESS_KEY=your-secret-key
 export AWS_REGION=us-east-1
 
 # Start server
-amazon-chat serve
+bedrock-chat serve
 ```
 
 ### Production Deployment
@@ -577,4 +577,4 @@ jobs:
 
 ---
 
-This guide covers all aspects of AWS authentication for the Amazon Chat Completions Server. Choose the method that best fits your deployment scenario and security requirements. 
+This guide covers all aspects of AWS authentication for the Open Bedrock Server Server. Choose the method that best fits your deployment scenario and security requirements. 

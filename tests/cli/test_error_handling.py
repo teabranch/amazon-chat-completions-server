@@ -4,7 +4,7 @@ import pytest
 import requests
 from rich.console import Console
 
-from src.open_amazon_chat_completions_server.cli.error_handling import (
+from src.open_bedrock_server.cli.error_handling import (
     CLIErrorHandler,
     make_api_request,
 )

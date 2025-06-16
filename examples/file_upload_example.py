@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Example script demonstrating how to use the /v1/files endpoint
-for uploading files to the Amazon Chat Completions Server.
+for uploading files to the Open Bedrock Server.
 
 This script shows how to upload files in an OpenAI-compatible way.
 """
@@ -115,7 +115,7 @@ def check_files_health():
 
 def main():
     """Main function to run the examples."""
-    print("🚀 Amazon Chat Completions Server - File Upload Example")
+    print("🚀 Open Bedrock Server - File Upload Example")
     print("=" * 60)
 
     # Check service health first
@@ -131,7 +131,7 @@ def main():
     else:
         print("\n💡 Tips for troubleshooting:")
         print(
-            "1. Make sure the server is running (uvicorn src.open_amazon_chat_completions_server.api.app:app)"
+            "1. Make sure the server is running (uvicorn src.open_bedrock_server.api.app:app)"
         )
         print("2. Check that S3_FILES_BUCKET is configured in your .env file")
         print("3. Verify AWS credentials are properly set up")

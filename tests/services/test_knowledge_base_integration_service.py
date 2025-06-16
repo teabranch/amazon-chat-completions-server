@@ -3,12 +3,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.open_amazon_chat_completions_server.core.knowledge_base_models import (
+from src.open_bedrock_server.core.knowledge_base_models import (
     Citation,
     RAGResponse,
     RetrievalResult,
 )
-from src.open_amazon_chat_completions_server.core.models import (
+from src.open_bedrock_server.core.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     Choice,
@@ -16,12 +16,12 @@ from src.open_amazon_chat_completions_server.core.models import (
     ResponseMessage,
     Usage,
 )
-from src.open_amazon_chat_completions_server.services.knowledge_base_integration_service import (
+from src.open_bedrock_server.services.knowledge_base_integration_service import (
     IntegrationResult,
     IntegrationStrategy,
     KnowledgeBaseIntegrationService,
 )
-from src.open_amazon_chat_completions_server.utils.knowledge_base_detector import (
+from src.open_bedrock_server.utils.knowledge_base_detector import (
     DetectionResult,
 )
 
@@ -36,7 +36,7 @@ class TestKnowledgeBaseIntegrationService:
     def mock_kb_service(self):
         """Mock KnowledgeBaseService."""
         with patch(
-            "src.open_amazon_chat_completions_server.services.knowledge_base_integration_service.KnowledgeBaseService"
+            "src.open_bedrock_server.services.knowledge_base_integration_service.KnowledgeBaseService"
         ) as mock_service:
             mock_instance = Mock()
             mock_service.return_value = mock_instance
@@ -46,7 +46,7 @@ class TestKnowledgeBaseIntegrationService:
     def mock_detector(self):
         """Mock KnowledgeBaseDetector."""
         with patch(
-            "src.open_amazon_chat_completions_server.services.knowledge_base_integration_service.KnowledgeBaseDetector"
+            "src.open_bedrock_server.services.knowledge_base_integration_service.KnowledgeBaseDetector"
         ) as mock_detector:
             mock_instance = Mock()
             mock_detector.return_value = mock_instance
@@ -56,7 +56,7 @@ class TestKnowledgeBaseIntegrationService:
     def mock_bedrock_service(self):
         """Mock BedrockService for fallback chat."""
         with patch(
-            "src.open_amazon_chat_completions_server.services.knowledge_base_integration_service.BedrockService"
+            "src.open_bedrock_server.services.knowledge_base_integration_service.BedrockService"
         ) as mock_service:
             mock_instance = Mock()
             mock_service.return_value = mock_instance

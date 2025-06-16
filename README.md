@@ -1,4 +1,4 @@
-# Amazon Chat Completions Server
+# Open Bedrock Server
 
 A unified, provider-agnostic chat completions API server that seamlessly integrates OpenAI and AWS Bedrock through a single endpoint with intelligent format detection and conversion.
 
@@ -34,8 +34,8 @@ A unified, provider-agnostic chat completions API server that seamlessly integra
 
 ```bash
 # Clone the repository
-git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
-cd open-amazon-chat-completions-server
+git clone https://github.com/teabranch/open-bedrock-server.git
+cd open-bedrock-server
 
 # Install with uv (recommended)
 uv pip install -e .
@@ -48,7 +48,7 @@ pip install -e .
 
 ```bash
 # Interactive configuration setup
-amazon-chat config set
+bedrock-chat config set
 
 # Or manually create .env file
 # Create .env file with your configuration
@@ -59,7 +59,7 @@ amazon-chat config set
 
 ```bash
 # Start the server
-amazon-chat serve --host 0.0.0.0 --port 8000
+bedrock-chat serve --host 0.0.0.0 --port 8000
 
 # Server will be available at:
 # 🌐 API: http://localhost:8000
@@ -363,25 +363,25 @@ Response includes S3 connectivity and credential validation.
 
 ```bash
 # Option 1: Development installation
-git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
-cd open-amazon-chat-completions-server
+git clone https://github.com/teabranch/open-bedrock-server.git
+cd open-bedrock-server
 uv pip install -e .
 
 # Option 2: Direct from GitHub
-pip install git+https://github.com/teabranch/open-amazon-chat-completions-server.git
+pip install git+https://github.com/teabranch/open-bedrock-server.git
 
 # Option 3: Local wheel
-pip install dist/open_amazon_chat_completions_server-*.whl
+pip install dist/open_bedrock_server-*.whl
 ```
 
 ### Verify Installation
 
 ```bash
 # Check CLI is available
-amazon-chat --help
+bedrock-chat --help
 
 # Check version
-amazon-chat config show
+bedrock-chat config show
 ```
 
 ## ⚙️ Configuration
@@ -413,7 +413,7 @@ AWS_REGION=us-east-1
 # Option 3: AWS Role Assumption (for cross-account access or enhanced security)
 AWS_ROLE_ARN=arn:aws:iam::123456789012:role/MyBedrockRole
 AWS_EXTERNAL_ID=your-external-id  # Optional, for cross-account role assumption
-AWS_ROLE_SESSION_NAME=amazon-chat-completions-session  # Optional
+AWS_ROLE_SESSION_NAME=bedrock-server-session  # Optional
 AWS_ROLE_SESSION_DURATION=3600  # Optional, session duration in seconds
 AWS_REGION=us-east-1
 
@@ -475,7 +475,7 @@ AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 # Role to assume
 AWS_ROLE_ARN=arn:aws:iam::123456789012:role/BedrockAccessRole
 AWS_EXTERNAL_ID=unique-external-id  # Optional, for cross-account scenarios
-AWS_ROLE_SESSION_NAME=amazon-chat-completions-session  # Optional
+AWS_ROLE_SESSION_NAME=bedrock-server-session  # Optional
 AWS_ROLE_SESSION_DURATION=3600  # Optional, 900-43200 seconds (default: 3600)
 AWS_REGION=us-east-1
 ```
@@ -509,7 +509,7 @@ For containerized environments with OIDC providers:
 ```env
 AWS_WEB_IDENTITY_TOKEN_FILE=/var/run/secrets/eks.amazonaws.com/serviceaccount/token
 AWS_ROLE_ARN=arn:aws:iam::123456789012:role/EKSBedrockRole
-AWS_ROLE_SESSION_NAME=amazon-chat-completions-session  # Optional
+AWS_ROLE_SESSION_NAME=bedrock-server-session  # Optional
 AWS_REGION=us-east-1
 ```
 
@@ -518,7 +518,7 @@ AWS_REGION=us-east-1
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: amazon-chat-completions
+  name: bedrock-server
   annotations:
     eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/EKSBedrockRole
 ```
@@ -601,7 +601,7 @@ AWS_REGION=us-east-1
 
 ```bash
 # Test your AWS configuration
-amazon-chat config test-aws
+bedrock-chat config test-aws
 
 # Or manually test with AWS CLI
 aws sts get-caller-identity --profile your-profile
@@ -642,16 +642,16 @@ For role assumption, also add:
 
 ```bash
 # Run interactive setup
-amazon-chat config set
+bedrock-chat config set
 
 # View current configuration (sensitive values masked)
-amazon-chat config show
+bedrock-chat config show
 
 # Set specific values
-amazon-chat config set --key OPENAI_API_KEY --value sk-your-key
+bedrock-chat config set --key OPENAI_API_KEY --value sk-your-key
 
 # Test AWS authentication
-amazon-chat config test-aws
+bedrock-chat config test-aws
 ```
 
 > 📖 **For detailed AWS authentication documentation, see [AWS Authentication Guide](docs/AWS_AUTHENTICATION.md)**
@@ -772,37 +772,37 @@ if response.json()["choices"][0]["message"].get("tool_calls"):
 
 ```bash
 # Interactive chat session
-amazon-chat chat --model gpt-4o-mini
+bedrock-chat chat --model gpt-4o-mini
 
 # Start server
-amazon-chat serve --host 0.0.0.0 --port 8000
+bedrock-chat serve --host 0.0.0.0 --port 8000
 
 # Configuration management
-amazon-chat config set
-amazon-chat config show
+bedrock-chat config set
+bedrock-chat config show
 
 # List available models
-amazon-chat models
+bedrock-chat models
 
 # Get help
-amazon-chat --help
-amazon-chat COMMAND --help
+bedrock-chat --help
+bedrock-chat COMMAND --help
 ```
 
 ### Chat Session
 
 ```bash
 # Start interactive chat
-amazon-chat chat --model gpt-4o-mini --stream
+bedrock-chat chat --model gpt-4o-mini --stream
 
 # Chat with custom settings
-amazon-chat chat \
+bedrock-chat chat \
   --model anthropic.claude-3-haiku-20240307-v1:0 \
   --temperature 0.8 \
   --max-tokens 500
 
 # Chat with custom server
-amazon-chat chat \
+bedrock-chat chat \
   --server-url https://my-server.com \
   --api-key my-key
 ```
@@ -811,10 +811,10 @@ amazon-chat chat \
 
 ```bash
 # Development server with auto-reload
-amazon-chat serve --reload --log-level debug
+bedrock-chat serve --reload --log-level debug
 
 # Production server
-amazon-chat serve \
+bedrock-chat serve \
   --host 0.0.0.0 \
   --port 8000 \
   --workers 4 \
@@ -1002,13 +1002,13 @@ uv run pytest -m "aws_integration"
 
 ```bash
 # Build image
-docker build -t open-amazon-chat-completions-server .
+docker build -t open-bedrock-server .
 
 # Run container
 docker run -p 8000:8000 \
   -e API_KEY=your-api-key \
   -e OPENAI_API_KEY=sk-your-key \
-  open-amazon-chat-completions-server
+  open-bedrock-server
 ```
 
 ### Production Considerations
@@ -1027,8 +1027,8 @@ We welcome contributions! Please see our [Development Guide](docs/development.md
 
 ```bash
 # Clone and setup
-git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
-cd open-amazon-chat-completions-server
+git clone https://github.com/teabranch/open-bedrock-server.git
+cd open-bedrock-server
 
 # Install development dependencies
 uv pip install -e ".[dev]"
@@ -1059,8 +1059,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **API Reference**: [docs/api-reference.md](docs/api-reference.md)
 - **CLI Reference**: [docs/cli-reference.md](docs/cli-reference.md)
 - **Architecture Guide**: [docs/architecture.md](docs/architecture.md)
-- **Issues**: [GitHub Issues](https://github.com/teabranch/open-amazon-chat-completions-server/issues)
+- **Issues**: [GitHub Issues](https://github.com/teabranch/open-bedrock-server/issues)
 
 ---
 
-**Amazon Chat Completions Server** - Unifying LLM providers through intelligent format detection and seamless conversion. 🚀
+**Open Bedrock Server** - Unifying LLM providers through intelligent format detection and seamless conversion. 🚀

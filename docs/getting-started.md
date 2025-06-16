@@ -2,13 +2,13 @@
 layout: default
 title: Getting Started
 nav_order: 2
-description: "Quick start guide for Amazon Chat Completions Server"
+description: "Quick start guide for Open Bedrock Server Server"
 ---
 
 # Getting Started
 {: .no_toc }
 
-This guide will help you get the Amazon Chat Completions Server up and running quickly.
+This guide will help you get the Open Bedrock Server Server up and running quickly.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -51,8 +51,8 @@ pip install uv
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/teabranch/open-amazon-chat-completions-server.git
-cd open-amazon-chat-completions-server
+git clone https://github.com/teabranch/open-bedrock-server.git
+cd open-bedrock-server
 ```
 
 ### 2. Install the Package
@@ -68,7 +68,7 @@ pip install -e .
 ### 3. Verify Installation
 
 ```bash
-amazon-chat --version
+bedrock-chat --version
 ```
 
 ---
@@ -80,7 +80,7 @@ amazon-chat --version
 The easiest way to configure the server is using the interactive setup:
 
 ```bash
-amazon-chat config set
+bedrock-chat config set
 ```
 
 This will prompt you for:
@@ -136,7 +136,7 @@ For detailed AWS authentication setup, see the [AWS Authentication Guide](guides
 ### Basic Server Start
 
 ```bash
-amazon-chat serve
+bedrock-chat serve
 ```
 
 This starts the server on `http://localhost:8000`.
@@ -144,13 +144,13 @@ This starts the server on `http://localhost:8000`.
 ### Production Server Start
 
 ```bash
-amazon-chat serve --host 0.0.0.0 --port 8000 --workers 4
+bedrock-chat serve --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 ### Development Server Start
 
 ```bash
-amazon-chat serve --reload --log-level debug
+bedrock-chat serve --reload --log-level debug
 ```
 
 ---
@@ -287,7 +287,7 @@ curl -X DELETE \
 Try the built-in chat interface:
 
 ```bash
-amazon-chat chat --model gpt-4o-mini
+bedrock-chat chat --model gpt-4o-mini
 ```
 
 This starts an interactive chat session where you can:
@@ -383,7 +383,7 @@ Now that you have the server running:
 
 **Server won't start:**
 - Check that the port isn't already in use
-- Verify your configuration with `amazon-chat config show`
+- Verify your configuration with `bedrock-chat config show`
 - Check logs for specific error messages
 
 **API calls fail:**
@@ -401,7 +401,7 @@ Now that you have the server running:
 - Check the [API Reference](api-reference) for detailed endpoint documentation
 - Review the [CLI Reference](cli-reference) for command-line usage
 - Look at the [Usage Guide](guides/usage) for programming examples
-- Open an issue on [GitHub](https://github.com/teabranch/open-amazon-chat-completions-server/issues) if you need help
+- Open an issue on [GitHub](https://github.com/teabranch/open-bedrock-server/issues) if you need help
 
 ---
 
@@ -410,7 +410,7 @@ Now that you have the server running:
 For a complete list of configuration options, see your `.env` file or run:
 
 ```bash
-amazon-chat config show
+bedrock-chat config show
 ```
 
 Key configuration variables:

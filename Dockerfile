@@ -28,7 +28,7 @@ COPY pyproject.toml uv.lock ./
 COPY src ./src
 
 # Create a minimal README.md for setuptools if needed
-RUN echo "# Amazon Chat Completions Server" > README.md
+RUN echo "# Open Bedrock Server" > README.md
 
 # Install dependencies in a virtual environment
 RUN uv venv /app/.venv
@@ -80,4 +80,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # Use exec form and make port configurable
-CMD ["sh", "-c", "python -m uvicorn src.open_amazon_chat_completions_server.api.app:app --host 0.0.0.0 --port ${PORT}"] 
+CMD ["sh", "-c", "python -m uvicorn src.open_bedrock_server.api.app:app --host 0.0.0.0 --port ${PORT}"] 

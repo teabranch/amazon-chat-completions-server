@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.open_amazon_chat_completions_server.core.bedrock_models import (
+from src.open_bedrock_server.core.bedrock_models import (
     BedrockClaudeRequest,
     BedrockClaudeResponse,
     BedrockContentBlock,

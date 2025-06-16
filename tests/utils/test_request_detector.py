@@ -1,5 +1,5 @@
-from src.open_amazon_chat_completions_server.core.bedrock_models import RequestFormat
-from src.open_amazon_chat_completions_server.utils.request_detector import (
+from src.open_bedrock_server.core.bedrock_models import RequestFormat
+from src.open_bedrock_server.utils.request_detector import (
     RequestFormatDetector,
 )
 

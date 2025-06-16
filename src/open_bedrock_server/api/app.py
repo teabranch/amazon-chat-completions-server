@@ -6,7 +6,7 @@ from .middleware.logging import RequestLoggingMiddleware
 from .routes import chat, files, health, knowledge_bases, models
 
 app = FastAPI(
-    title="Amazon Chat Completions API",
+    title="Open Bedrock Server API",
     description="Unified API for interacting with various LLM providers via OpenAI-compatible endpoint with file management and knowledge bases",
     version="2.0.0",
 )

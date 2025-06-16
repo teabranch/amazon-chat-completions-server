@@ -20,16 +20,16 @@ We follow the `MAJOR.MINOR.PATCH` format:
 
 ### 2. PyPI Package
 - Uses `setuptools-scm` to automatically detect version from git tags
-- Published to: https://pypi.org/project/open-amazon-chat-completions-server
+- Published to: https://pypi.org/project/open-bedrock-server
 - Version verification step in CI ensures tag matches package version
 
 ### 3. Docker Images
 - Uses `docker/metadata-action` with semver patterns
-- Published to: `ghcr.io/teabranch/open-amazon-chat-completions-server`
+- Published to: `ghcr.io/teabranch/open-bedrock-server`
 - Creates multiple tags per release:
-  - `ghcr.io/teabranch/open-amazon-chat-completions-server:1.0.1` (exact version)
-  - `ghcr.io/teabranch/open-amazon-chat-completions-server:1.0` (major.minor)
-  - `ghcr.io/teabranch/open-amazon-chat-completions-server:1` (major)
+  - `ghcr.io/teabranch/open-bedrock-server:1.0.1` (exact version)
+  - `ghcr.io/teabranch/open-bedrock-server:1.0` (major.minor)
+  - `ghcr.io/teabranch/open-bedrock-server:1` (major)
 
 ## Release Process
 
@@ -96,18 +96,18 @@ Starting from version 1.0.0:
 
 1. **Patch Release (1.0.1)**: Bug fixes
    - Git tag: `v1.0.1`
-   - PyPI: `open-amazon-chat-completions-server==1.0.1`
-   - Docker: `ghcr.io/teabranch/open-amazon-chat-completions-server:1.0.1`
+   - PyPI: `open-bedrock-server==1.0.1`
+   - Docker: `ghcr.io/teabranch/open-bedrock-server:1.0.1`
 
 2. **Minor Release (1.1.0)**: New backward-compatible features  
    - Git tag: `v1.1.0`
-   - PyPI: `open-amazon-chat-completions-server==1.1.0`
-   - Docker: `ghcr.io/teabranch/open-amazon-chat-completions-server:1.1.0`
+   - PyPI: `open-bedrock-server==1.1.0`
+   - Docker: `ghcr.io/teabranch/open-bedrock-server:1.1.0`
 
 3. **Major Release (2.0.0)**: Breaking changes
    - Git tag: `v2.0.0` 
-   - PyPI: `open-amazon-chat-completions-server==2.0.0`
-   - Docker: `ghcr.io/teabranch/open-amazon-chat-completions-server:2.0.0`
+   - PyPI: `open-bedrock-server==2.0.0`
+   - Docker: `ghcr.io/teabranch/open-bedrock-server:2.0.0`
 
 ## Best Practices
 

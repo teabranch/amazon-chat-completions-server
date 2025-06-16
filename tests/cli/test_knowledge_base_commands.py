@@ -5,8 +5,8 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 
-from src.open_amazon_chat_completions_server.cli.main import main
-from src.open_amazon_chat_completions_server.core.knowledge_base_models import (
+from src.open_bedrock_server.cli.main import main
+from src.open_bedrock_server.core.knowledge_base_models import (
     Citation,
     DataSource,
     DataSourceList,
@@ -34,7 +34,7 @@ class TestKnowledgeBaseCLICommands:
     def mock_kb_service(self):
         """Mock KnowledgeBaseService for CLI testing."""
         with patch(
-            "src.open_amazon_chat_completions_server.cli.main.KnowledgeBaseService"
+            "src.open_bedrock_server.cli.main.KnowledgeBaseService"
         ) as mock_service:
             mock_instance = Mock()
             mock_service.return_value = mock_instance

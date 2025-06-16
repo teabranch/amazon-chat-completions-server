@@ -1,6 +1,6 @@
 # Knowledge Bases (RAG) Integration
 
-This guide covers the integrated AWS Bedrock Knowledge Bases functionality in the Amazon Chat Completions Server, providing Retrieval-Augmented Generation (RAG) capabilities.
+This guide covers the integrated AWS Bedrock Knowledge Bases functionality in the Open Bedrock Server Server, providing Retrieval-Augmented Generation (RAG) capabilities.
 
 ## Overview
 
@@ -361,7 +361,7 @@ In your server configuration, you can set default behavior:
 
 ```python
 # If using programmatically
-from open_amazon_chat_completions_server.services.knowledge_base_service import get_knowledge_base_service
+from open_bedrock_server.services.knowledge_base_service import get_knowledge_base_service
 
 kb_service = get_knowledge_base_service(
     AWS_REGION="us-east-1",

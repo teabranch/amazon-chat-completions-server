@@ -3,13 +3,13 @@ layout: default
 title: Core Components
 parent: Guides
 nav_order: 4
-description: "Detailed component documentation for Amazon Chat Completions Server"
+description: "Detailed component documentation for Open Bedrock Server Server"
 ---
 
 # Core Components
 {: .no_toc }
 
-This document provides a comprehensive overview of the core components that make up the Amazon Chat Completions Server.
+This document provides a comprehensive overview of the core components that make up the Open Bedrock Server Server.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -522,7 +522,7 @@ class ResponseConverter:
 **Main Application:**
 ```python
 app = FastAPI(
-    title="Amazon Chat Completions Server",
+    title="Open Bedrock Server Server",
     description="Unified, provider-agnostic chat completions API",
     version="1.0.0"
 )
@@ -595,7 +595,7 @@ async def unified_chat_completions(
 @click.group()
 @click.version_option()
 def cli():
-    """Amazon Chat Completions Server CLI"""
+    """Open Bedrock Server Server CLI"""
     pass
 
 # Add commands
@@ -647,4 +647,4 @@ def chat(model: str, server_url: str, api_key: Optional[str]):
 
 ---
 
-This comprehensive overview covers all the major components of the Amazon Chat Completions Server. Each component is designed to be modular, testable, and extensible, following SOLID principles and clean architecture patterns. 
+This comprehensive overview covers all the major components of the Open Bedrock Server Server. Each component is designed to be modular, testable, and extensible, following SOLID principles and clean architecture patterns. 

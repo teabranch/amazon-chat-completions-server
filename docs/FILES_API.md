@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Amazon Chat Completions Server provides a comprehensive OpenAI-compatible file management API with S3 backend storage. This allows you to upload, manage, and use files in your chat completions for enhanced AI interactions.
+The Open Bedrock Server Server provides a comprehensive OpenAI-compatible file management API with S3 backend storage. This allows you to upload, manage, and use files in your chat completions for enhanced AI interactions.
 
 ## Features
 

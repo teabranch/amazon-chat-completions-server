@@ -3,13 +3,13 @@ layout: default
 title: Architecture
 parent: Guides
 nav_order: 3
-description: "System design and architecture overview for Amazon Chat Completions Server"
+description: "System design and architecture overview for Open Bedrock Server Server"
 ---
 
 # Architecture Guide
 {: .no_toc }
 
-This document describes the architecture of the Amazon Chat Completions Server, which implements a unified, provider-agnostic approach to LLM integration.
+This document describes the architecture of the Open Bedrock Server Server, which implements a unified, provider-agnostic approach to LLM integration.
 {: .fs-6 .fw-300 }
 
 ## Table of contents

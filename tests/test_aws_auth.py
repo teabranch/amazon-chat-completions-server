@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.open_amazon_chat_completions_server.core.exceptions import ConfigurationError
-from src.open_amazon_chat_completions_server.services.bedrock_service import (
+from src.open_bedrock_server.core.exceptions import ConfigurationError
+from src.open_bedrock_server.services.bedrock_service import (
     BedrockService,
 )
 
@@ -55,7 +55,7 @@ class TestAWSAuthenticationMocked:
     """Test AWS authentication methods with mocked AWS services."""
 
     @patch(
-        "src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session"
+        "src.open_bedrock_server.services.bedrock_service.boto3.Session"
     )
     def test_static_credentials_session_creation(self, mock_session):
         """Test session creation with static AWS credentials."""
@@ -89,7 +89,7 @@ class TestAWSAuthenticationMocked:
             )
 
     @patch(
-        "src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session"
+        "src.open_bedrock_server.services.bedrock_service.boto3.Session"
     )
     def test_profile_session_creation(self, mock_session):
         """Test session creation with AWS profile."""
@@ -116,7 +116,7 @@ class TestAWSAuthenticationMocked:
             )
 
     @patch(
-        "src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session"
+        "src.open_bedrock_server.services.bedrock_service.boto3.Session"
     )
     def test_role_assumption_session_creation_mocked(self, mock_session):
         """Test session creation with role assumption (mocked)."""
@@ -164,7 +164,7 @@ class TestAWSAuthenticationMocked:
             assert "DurationSeconds" in call_args
 
     @patch(
-        "src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session"
+        "src.open_bedrock_server.services.bedrock_service.boto3.Session"
     )
     def test_web_identity_session_creation(self, mock_session):
         """Test session creation with web identity token."""
@@ -189,7 +189,7 @@ class TestAWSAuthenticationMocked:
             assert mock_session.called
 
     @patch(
-        "src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session"
+        "src.open_bedrock_server.services.bedrock_service.boto3.Session"
     )
     def test_authentication_priority_order(self, mock_session):
         """Test that authentication methods are used in the correct priority order."""
@@ -227,7 +227,7 @@ class TestAWSAuthenticationMocked:
             )
 
     @patch(
-        "src.open_amazon_chat_completions_server.services.bedrock_service.boto3.Session"
+        "src.open_bedrock_server.services.bedrock_service.boto3.Session"
     )
     def test_session_duration_validation(self, mock_session):
         """Test that session duration is properly validated."""
@@ -539,7 +539,7 @@ class TestAWSAuthenticationConfiguration:
     )
     def test_configuration_validation(self):
         """Test that configuration validation works with new authentication methods."""
-        from src.open_amazon_chat_completions_server.utils.config_loader import (
+        from src.open_bedrock_server.utils.config_loader import (
             AppConfig,
         )
 

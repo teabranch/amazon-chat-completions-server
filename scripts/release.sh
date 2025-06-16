@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Release script for open-amazon-chat-completions-server
+# Release script for open-bedrock-server
 # This script ensures version consistency between git tags, PyPI, and Docker releases
 
 set -e

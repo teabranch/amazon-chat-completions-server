@@ -1,5 +1,5 @@
 ---
-description: Complete API reference for Amazon Chat Completions Server
+description: Complete API reference for Open Bedrock Server Server
 layout: default
 nav_order: 3
 title: API Reference
@@ -9,7 +9,7 @@ title: API Reference
 
 {: .no_toc }
 
-Complete reference for all API endpoints in the Amazon Chat Completions Server.
+Complete reference for all API endpoints in the Open Bedrock Server Server.
 {: .fs-6 .fw-300 }
 
 ## Table of contents

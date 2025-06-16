@@ -1,13 +1,17 @@
 import logging
 import os
+from pathlib import Path
+from typing import Dict, Optional
 
 from dotenv import load_dotenv
+import boto3
+from botocore.exceptions import NoCredentialsError
 
 logger = logging.getLogger(__name__)
 
 # Load .env file from the project root.
 # Adjust the path if your .env file is located elsewhere relative to this script.
-# Assuming this script is in src/open_amazon_chat_completions_server/utils, .env is two levels up.
+# Assuming this script is in src/open_bedrock_server/utils, .env is two levels up.
 dotenv_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env")
 
 if os.path.exists(dotenv_path):
@@ -70,7 +74,7 @@ class AppConfig:
             "AWS_EXTERNAL_ID"
         )  # For assume role with external ID
         self.AWS_ROLE_SESSION_NAME: str | None = os.getenv(
-            "AWS_ROLE_SESSION_NAME", "amazon-chat-completions-session"
+            "AWS_ROLE_SESSION_NAME", "bedrock-server-session"
         )  # Session name for assume role
         self.AWS_WEB_IDENTITY_TOKEN_FILE: str | None = os.getenv(
             "AWS_WEB_IDENTITY_TOKEN_FILE"
@@ -254,3 +258,233 @@ app_config = AppConfig()
 # Example of how to use it elsewhere:
 # from .config_loader import app_config
 # api_key = app_config.OPENAI_API_KEY
+
+# Assuming this script is in src/open_bedrock_server/utils, .env is two levels up.
+DEFAULT_ENV_PATH = Path(__file__).parent.parent.parent.parent / ".env"
+
+def load_environment_config(env_file_path: Optional[str] = None) -> Dict[str, str]:
+    """
+    Load environment variables from .env file and return as dict.
+    
+    Args:
+        env_file_path: Optional path to .env file. If None, uses default path.
+        
+    Returns:
+        Dict containing all environment variables
+    """
+    if env_file_path:
+        env_path = Path(env_file_path)
+    else:
+        env_path = DEFAULT_ENV_PATH
+    
+    if env_path.exists():
+        load_dotenv(env_path)
+    
+    # Return all environment variables as dict
+    return dict(os.environ)
+
+def get_aws_session() -> boto3.Session:
+    """
+    Create and return an AWS session using the configured authentication method.
+    
+    Returns:
+        boto3.Session: Configured AWS session
+        
+    Raises:
+        NoCredentialsError: If no valid AWS credentials are found
+    """
+    # Try different authentication methods in priority order
+    
+    # 1. Check for role assumption
+    role_arn = os.getenv("AWS_ROLE_ARN")
+    if role_arn:
+        return _assume_role_session(role_arn)
+    
+    # 2. Check for web identity token
+    web_identity_token_file = os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
+    if web_identity_token_file:
+        return _web_identity_session(web_identity_token_file, role_arn)
+    
+    # 3. Use AWS profile if specified
+    aws_profile = os.getenv("AWS_PROFILE")
+    if aws_profile:
+        return boto3.Session(profile_name=aws_profile)
+    
+    # 4. Use static credentials if provided
+    access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    session_token = os.getenv("AWS_SESSION_TOKEN")
+    
+    if access_key and secret_key:
+        return boto3.Session(
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            aws_session_token=session_token
+        )
+    
+    # 5. Fall back to default credential chain
+    return boto3.Session()
+
+def _assume_role_session(role_arn: str) -> boto3.Session:
+    """
+    Create a session by assuming an IAM role.
+    
+    Args:
+        role_arn: ARN of the role to assume
+        
+    Returns:
+        boto3.Session: Session with assumed role credentials
+    """
+    # First, get a base session to assume the role
+    base_session = _get_base_session_for_role_assumption()
+    
+    sts_client = base_session.client("sts")
+    
+    # Prepare assume role parameters
+    assume_role_params = {
+        "RoleArn": role_arn,
+        "RoleSessionName": os.getenv("AWS_ROLE_SESSION_NAME", "bedrock-server-session"),
+    }
+    
+    # Add optional parameters if they exist
+    external_id = os.getenv("AWS_EXTERNAL_ID")
+    if external_id:
+        assume_role_params["ExternalId"] = external_id
+    
+    session_duration = os.getenv("AWS_ROLE_SESSION_DURATION")
+    if session_duration:
+        assume_role_params["DurationSeconds"] = int(session_duration)
+    
+    # Assume the role
+    response = sts_client.assume_role(**assume_role_params)
+    credentials = response["Credentials"]
+    
+    # Create new session with assumed role credentials
+    return boto3.Session(
+        aws_access_key_id=credentials["AccessKeyId"],
+        aws_secret_access_key=credentials["SecretAccessKey"],
+        aws_session_token=credentials["SessionToken"]
+    )
+
+def _get_base_session_for_role_assumption() -> boto3.Session:
+    """
+    Get base session for role assumption.
+    Role assumption requires existing credentials to assume the role.
+    """
+    # Try AWS profile first
+    aws_profile = os.getenv("AWS_PROFILE")
+    if aws_profile:
+        return boto3.Session(profile_name=aws_profile)
+    
+    # Try static credentials
+    access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    session_token = os.getenv("AWS_SESSION_TOKEN")
+    
+    if access_key and secret_key:
+        return boto3.Session(
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            aws_session_token=session_token
+        )
+    
+    # Try default credential chain
+    session = boto3.Session()
+    try:
+        # Test if credentials are available
+        session.get_credentials()
+        return session
+    except NoCredentialsError:
+        raise NoCredentialsError(
+            "Role assumption requires base AWS credentials. "
+            "Please set AWS_PROFILE, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, "
+            "or configure default AWS credentials."
+        )
+
+def _web_identity_session(token_file: str, role_arn: Optional[str]) -> boto3.Session:
+    """
+    Create a session using web identity token (OIDC/IRSA).
+    
+    Args:
+        token_file: Path to the web identity token file
+        role_arn: ARN of the role to assume (required for web identity)
+        
+    Returns:
+        boto3.Session: Session with web identity credentials
+    """
+    if not role_arn:
+        role_arn = os.getenv("AWS_ROLE_ARN")
+        if not role_arn:
+            raise ValueError(
+                "AWS_ROLE_ARN is required when using web identity tokens"
+            )
+    
+    # Create STS client without credentials (will use web identity)
+    sts_client = boto3.client("sts")
+    
+    # Read the token file
+    with open(token_file, 'r') as f:
+        token = f.read().strip()
+    
+    # Assume role with web identity
+    response = sts_client.assume_role_with_web_identity(
+        RoleArn=role_arn,
+        RoleSessionName=os.getenv("AWS_ROLE_SESSION_NAME", "bedrock-server-session"),
+        WebIdentityToken=token
+    )
+    
+    credentials = response["Credentials"]
+    
+    return boto3.Session(
+        aws_access_key_id=credentials["AccessKeyId"],
+        aws_secret_access_key=credentials["SecretAccessKey"],
+        aws_session_token=credentials["SessionToken"]
+    )
+
+def test_aws_configuration() -> Dict[str, str]:
+    """
+    Test the current AWS configuration and return status information.
+    
+    Returns:
+        Dict containing configuration test results
+    """
+    result = {
+        "status": "unknown",
+        "identity": None,
+        "region": None,
+        "auth_method": "unknown",
+        "error": None
+    }
+    
+    try:
+        session = get_aws_session()
+        
+        # Determine auth method
+        if os.getenv("AWS_ROLE_ARN"):
+            if os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE"):
+                result["auth_method"] = "web_identity"
+            else:
+                result["auth_method"] = "role_assumption"
+        elif os.getenv("AWS_PROFILE"):
+            result["auth_method"] = "aws_profile"
+        elif os.getenv("AWS_ACCESS_KEY_ID"):
+            result["auth_method"] = "static_credentials"
+        else:
+            result["auth_method"] = "default_chain"
+        
+        # Test credentials by getting caller identity
+        sts = session.client("sts")
+        identity = sts.get_caller_identity()
+        result["identity"] = identity
+        
+        # Get region
+        region = session.region_name or os.getenv("AWS_REGION", "us-east-1")
+        result["region"] = region
+        
+        result["status"] = "success"
+        
+    except Exception as e:
+        result["status"] = "error"
+        result["error"] = str(e)
+    
+    return result
