@@ -25,34 +25,24 @@ jobs:
         with:
           fetch-depth: 0  # Fetch full history for hatch-vcs
 
-      - name: Set up Python (for hatch version)
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Install hatch
-        run: |
-          pip install uv
-          uv tool install hatch
-
-      - name: Get version from hatch
+      - name: Get version from VERSION file
         id: version
         run: |
-          VERSION=$(hatch version)
+          VERSION=$(cat VERSION)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current version: $VERSION"
+          echo "Version from file: $VERSION"
 
       - name: Verify version for release
         run: |
-          # Verify hatch version matches release tag
-          HATCH_VERSION="${{ steps.version.outputs.version }}"
+          # Verify file version matches release tag
+          FILE_VERSION="${{ steps.version.outputs.version }}"
           GITHUB_TAG=${GITHUB_REF#refs/tags/}
-          echo "Hatch version: $HATCH_VERSION"
+          echo "Version from file: $FILE_VERSION"
           echo "GitHub release tag: $GITHUB_TAG"
-          if [[ "$GITHUB_TAG" == "v$HATCH_VERSION" ]] || [[ "$GITHUB_TAG" == "$HATCH_VERSION" ]]; then
-            echo "✅ Version consistency verified: $HATCH_VERSION"
+          if [[ "$GITHUB_TAG" == "v$FILE_VERSION" ]] || [[ "$GITHUB_TAG" == "$FILE_VERSION" ]]; then
+            echo "✅ Version consistency verified: $FILE_VERSION"
           else
-            echo "❌ Version mismatch! Hatch: $HATCH_VERSION, Tag: $GITHUB_TAG"
+            echo "❌ Version mismatch! File: $FILE_VERSION, Tag: $GITHUB_TAG"
             exit 1
           fi
         if: github.event_name == 'release'

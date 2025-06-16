@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
@@ -73,10 +73,8 @@ dev = [
 bedrock-chat = "open_bedrock_server.cli.main:cli"
 
 [tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.build.hooks.vcs]
-version-file = "src/open_bedrock_server/_version.py"
+path = "VERSION"
+pattern = "(?P<version>.+)"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -147,7 +145,6 @@ ignore_missing_imports = true
 [dependency-groups]
 dev = [
     "async-asgi-testclient>=1.4.11",
-    "hatch-vcs>=0.5.0",
     "httpx>=0.28.1",
     "pytest>=8.4.0",
     "pytest-asyncio>=1.0.0",

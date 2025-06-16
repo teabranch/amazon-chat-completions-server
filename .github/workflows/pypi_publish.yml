@@ -22,6 +22,13 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Get version from VERSION file
+        id: version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version from file: $VERSION"
+
       - name: Install uv
         run: |
           python -m pip install --upgrade pip
@@ -37,27 +44,22 @@ jobs:
 
       - name: Verify version consistency
         run: |
-          # Get version from hatch (uses hatch-vcs to read from git tags)
-          HATCH_VERSION=$(hatch version)
+          # Get version from VERSION file
+          FILE_VERSION="${{ steps.version.outputs.version }}"
           # Get the release tag from GitHub
           GITHUB_TAG=${GITHUB_REF#refs/tags/}
-          echo "Hatch version: $HATCH_VERSION"
+          echo "Version from file: $FILE_VERSION"
           echo "GitHub release tag: $GITHUB_TAG"
           
           # Strip 'v' prefix from tag if present
           CLEAN_TAG=${GITHUB_TAG#v}
           
-          # Check if hatch version matches the tag exactly
-          if [[ "$HATCH_VERSION" == "$CLEAN_TAG" ]]; then
-            echo "✅ Version consistency verified: $HATCH_VERSION"
-          # Check if this is a dev version based on the tag (common with hatch-vcs)
-          elif [[ "$HATCH_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+\+g[a-f0-9]+\.d[0-9]+ ]]; then
-            echo "⚠️  Development version detected: $HATCH_VERSION"
-            echo "This suggests there are commits after the tag $CLEAN_TAG"
-            echo "Consider creating a proper release tag at the exact commit you want to release"
-            exit 1
+          # Check if file version matches the tag exactly
+          if [[ "$FILE_VERSION" == "$CLEAN_TAG" ]]; then
+            echo "✅ Version consistency verified: $FILE_VERSION"
           else
-            echo "❌ Version mismatch! Hatch: $HATCH_VERSION, Tag: $CLEAN_TAG"
+            echo "❌ Version mismatch! File: $FILE_VERSION, Tag: $CLEAN_TAG"
+            echo "Please update the VERSION file to match the release tag"
             exit 1
           fi
 
