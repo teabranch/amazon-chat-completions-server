@@ -5,15 +5,14 @@ import pytest
 
 from src.open_bedrock_server.core.knowledge_base_models import (
     Citation,
-    RAGResponse,
     RetrievalResult,
+    RetrieveAndGenerateResponse,
 )
 from src.open_bedrock_server.core.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
-    Choice,
+    ChatCompletionChoice,
     Message,
-    ResponseMessage,
     Usage,
 )
 from src.open_bedrock_server.services.knowledge_base_integration_service import (
@@ -21,9 +20,7 @@ from src.open_bedrock_server.services.knowledge_base_integration_service import 
     IntegrationStrategy,
     KnowledgeBaseIntegrationService,
 )
-from src.open_bedrock_server.utils.knowledge_base_detector import (
-    DetectionResult,
-)
+
 
 
 @pytest.mark.knowledge_base
@@ -84,24 +81,12 @@ class TestKnowledgeBaseIntegrationService:
     @pytest.fixture
     def sample_rag_response(self):
         """Sample RAG response."""
-        return RAGResponse(
-            query_text="What is machine learning?",
-            generated_text="Machine learning is a subset of artificial intelligence...",
-            retrieval_results=[
-                RetrievalResult(
-                    content="ML is a method of data analysis...",
-                    score=0.95,
-                    metadata={"source": "ml_textbook.pdf"},
-                    location={
-                        "type": "S3",
-                        "s3Location": {"uri": "s3://bucket/ml_textbook.pdf"},
-                    },
-                )
-            ],
+        return RetrieveAndGenerateResponse(
+            output="Machine learning is a subset of artificial intelligence...",
             citations=[
                 Citation(
-                    generated_response_part="Machine learning is a subset",
-                    retrieved_references=[
+                    generatedResponsePart={"text": "Machine learning is a subset"},
+                    retrievedReferences=[
                         {
                             "content": "ML is a method of data analysis...",
                             "location": {
@@ -124,9 +109,9 @@ class TestKnowledgeBaseIntegrationService:
             created=int(datetime.now().timestamp()),
             model="anthropic.claude-3-haiku-20240307-v1:0",
             choices=[
-                Choice(
+                ChatCompletionChoice(
                     index=0,
-                    message=ResponseMessage(
+                    message=Message(
                         role="assistant",
                         content="I'd be happy to help you with that question.",
                     ),
@@ -193,12 +178,7 @@ class TestKnowledgeBaseIntegrationService:
         sample_chat_request.auto_kb = True
 
         # Mock positive detection
-        mock_detector.detect_retrieval_intent.return_value = DetectionResult(
-            should_use_kb=True,
-            confidence=0.85,
-            detected_patterns=["question_word", "specific_topic"],
-            reasoning="Query contains question words and technical topics",
-        )
+        mock_detector.should_use_knowledge_base.return_value = True
 
         # Mock RAG response
         mock_kb_service.retrieve_and_generate.return_value = sample_rag_response

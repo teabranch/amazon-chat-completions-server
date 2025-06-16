@@ -1053,5 +1053,10 @@ async def _async_kb_chat(
         console.print(f"Session saved as: {chat_session.id}")
 
 
+def main():
+    """Main entry point for the CLI."""
+    cli()
+
+
 if __name__ == "__main__":
     cli()

@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir uv==0.6.6
 WORKDIR /app
 
 # Copy dependency files first for better layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock LICENSE ./
 
 # Copy source code (needed for package installation)
 COPY src ./src
@@ -64,6 +64,7 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 COPY --from=builder --chown=appuser:appuser /app/src /app/src
 COPY --from=builder --chown=appuser:appuser /app/README.md /app/README.md
+COPY --from=builder --chown=appuser:appuser /app/LICENSE /app/LICENSE
 
 # Define the port as build arg with default
 ARG PORT=8000

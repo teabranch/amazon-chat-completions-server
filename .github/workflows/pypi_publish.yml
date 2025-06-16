@@ -33,7 +33,7 @@ jobs:
 
       - name: Install build dependencies with uv
         run: |
-          uv pip install build setuptools wheel setuptools_scm
+          uv pip install build hatchling
           uv pip install -e ".[dev]"
 
       - name: Install build module
@@ -43,8 +43,8 @@ jobs:
 
       - name: Verify version consistency
         run: |
-          # Get version from setuptools-scm (should match the git tag)
-          PYTHON_VERSION=$(uv run python -c "from setuptools_scm import get_version; print(get_version())")
+          # Get version from hatch (should match the git tag)
+          PYTHON_VERSION=$(uv run python -c "import open_bedrock_server; print(open_bedrock_server.__version__)")
           # Get the release tag from GitHub
           GITHUB_TAG=${GITHUB_REF#refs/tags/}
           echo "Python package version: $PYTHON_VERSION"
@@ -88,14 +88,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
-
-      - name: Upload to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          python -m pip install --upgrade twine
-          python -m twine upload dist/* --repository pypi --verbose
           
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -114,7 +106,5 @@ jobs:
             ## Installation
             
             Visit the [PyPI package page](https://pypi.org/project/open-bedrock-server) for installation instructions.
-          
-          url: https://pypi.org/project/open-bedrock-server
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
