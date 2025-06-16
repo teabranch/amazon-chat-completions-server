@@ -51,7 +51,6 @@ coverage.xml
 # Documentation
 docs/
 README.md
-LICENSE
 *.md
 
 # Cache directories
