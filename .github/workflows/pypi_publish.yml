@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch full history for setuptools-scm
+          fetch-depth: 0  # Fetch full history for hatch-vcs
 
       - name: Set up Python 3.x
         uses: actions/setup-python@v5
@@ -27,38 +27,32 @@ jobs:
           python -m pip install --upgrade pip
           pip install uv
 
-      - name: Set up uv env
+      - name: Install hatch
         run: |
-          uv venv
+          uv tool install hatch
 
-      - name: Install build dependencies with uv
+      - name: Install dependencies
         run: |
-          uv pip install build hatchling
-          uv pip install -e ".[dev]"
-
-      - name: Install build module
-        run: |
-          python -m pip install --upgrade pip
-          pip install build
+          uv sync --dev
 
       - name: Verify version consistency
         run: |
-          # Get version from hatch (should match the git tag)
-          PYTHON_VERSION=$(uv run python -c "import open_bedrock_server; print(open_bedrock_server.__version__)")
+          # Get version from hatch (uses hatch-vcs to read from git tags)
+          HATCH_VERSION=$(hatch version)
           # Get the release tag from GitHub
           GITHUB_TAG=${GITHUB_REF#refs/tags/}
-          echo "Python package version: $PYTHON_VERSION"
+          echo "Hatch version: $HATCH_VERSION"
           echo "GitHub release tag: $GITHUB_TAG"
           # Ensure they match (allowing for 'v' prefix in tag)
-          if [[ "$GITHUB_TAG" == "v$PYTHON_VERSION" ]] || [[ "$GITHUB_TAG" == "$PYTHON_VERSION" ]]; then
-            echo "✅ Version consistency verified: $PYTHON_VERSION"
+          if [[ "$GITHUB_TAG" == "v$HATCH_VERSION" ]] || [[ "$GITHUB_TAG" == "$HATCH_VERSION" ]]; then
+            echo "✅ Version consistency verified: $HATCH_VERSION"
           else
-            echo "❌ Version mismatch! Python: $PYTHON_VERSION, Tag: $GITHUB_TAG"
+            echo "❌ Version mismatch! Hatch: $HATCH_VERSION, Tag: $GITHUB_TAG"
             exit 1
           fi
 
       - name: Build release distributions
-        run: python -m build
+        run: hatch build
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4

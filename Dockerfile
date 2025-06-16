@@ -30,6 +30,16 @@ COPY src ./src
 # Create a minimal README.md for setuptools if needed
 RUN echo "# Open Bedrock Server" > README.md
 
+# Accept version as build argument
+ARG VERSION
+ENV HATCH_BUILD_NO_VCS=true
+
+# Create version file if VERSION is provided
+RUN if [ -n "$VERSION" ]; then \
+    mkdir -p src/open_bedrock_server && \
+    echo "__version__ = \"$VERSION\"" > src/open_bedrock_server/_version.py; \
+    fi
+
 # Install dependencies in a virtual environment
 RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
