@@ -84,9 +84,16 @@ jobs:
           echo "Verifying setuptools-scm with pretend version:"
           python -c "import setuptools_scm; print('Final version:', setuptools_scm.get_version())"
           
-          # Set environment variable and build package with no isolation to ensure version is passed through
-          export SETUPTOOLS_SCM_PRETEND_VERSION=${{ steps.version.outputs.version }}
-          python -m build --no-isolation
+          # Ensure the version file is correctly written before building
+          echo "Current _version.py content:"
+          cat src/open_bedrock_server/_version.py
+          
+          # Try setting the environment variable for the entire shell session and building
+          export SETUPTOOLS_SCM_PRETEND_VERSION="${{ steps.version.outputs.version }}"
+          echo "After export, environment variable: $SETUPTOOLS_SCM_PRETEND_VERSION"
+          
+          # Build with debugging enabled
+          SETUPTOOLS_SCM_DEBUG=1 python -m build --no-isolation
           
           echo "Built packages:"
           ls -la dist/
