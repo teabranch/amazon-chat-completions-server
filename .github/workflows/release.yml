@@ -84,8 +84,9 @@ jobs:
           echo "Verifying setuptools-scm with pretend version:"
           python -c "import setuptools_scm; print('Final version:', setuptools_scm.get_version())"
           
-          # Build package using modern pypa/build tool
-          SETUPTOOLS_SCM_PRETEND_VERSION=${{ steps.version.outputs.version }} python -m build
+          # Set environment variable and build package with no isolation to ensure version is passed through
+          export SETUPTOOLS_SCM_PRETEND_VERSION=${{ steps.version.outputs.version }}
+          python -m build --no-isolation
           
           echo "Built packages:"
           ls -la dist/
