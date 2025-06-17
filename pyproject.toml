@@ -73,8 +73,10 @@ dev = [
 bedrock-chat = "open_bedrock_server.cli.main:cli"
 
 [tool.setuptools]
-packages = ["open_bedrock_server"]
 package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools-scm]
 write_to = "src/open_bedrock_server/_version.py"
