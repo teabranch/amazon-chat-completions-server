@@ -78,7 +78,7 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools-scm]
+[tool.setuptools_scm]
 write_to = "src/open_bedrock_server/_version.py"
 
 [tool.pytest.ini_options]
