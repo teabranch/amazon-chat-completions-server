@@ -84,14 +84,8 @@ jobs:
           echo "Verifying setuptools-scm with pretend version:"
           python -c "import setuptools_scm; print('Final version:', setuptools_scm.get_version())"
           
-          # Try using setuptools directly with setup.py approach as fallback
-          echo "from setuptools import setup; setup()" > setup.py
-          
-          # Build package using legacy setuptools method that respects environment variables better
-          SETUPTOOLS_SCM_PRETEND_VERSION=${{ steps.version.outputs.version }} python setup.py sdist bdist_wheel
-          
-          # Clean up
-          rm setup.py
+          # Build package using modern pypa/build tool
+          SETUPTOOLS_SCM_PRETEND_VERSION=${{ steps.version.outputs.version }} python -m build
           
           echo "Built packages:"
           ls -la dist/
