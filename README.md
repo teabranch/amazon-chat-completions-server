@@ -2,6 +2,10 @@
 
 A unified, provider-agnostic chat completions API server that seamlessly integrates OpenAI and AWS Bedrock through a single endpoint with intelligent format detection and conversion.
 
+## 🌟 Why We Created This Project
+
+We created Open Bedrock Server to simplify the transition between different Large Language Models (LLMs). Our goal was to provide a unified endpoint that reduces the complexity of managing multiple configurations and API nuances. We wanted something simple that would work seamlessly, allowing developers to switch between LLM providers with minimal effort.
+
 ## 🚀 Key Features
 
 - **🔄 Unified Endpoint**: Single `/v1/chat/completions` endpoint handles all providers and formats
@@ -188,34 +192,44 @@ curl -X POST "http://localhost:8000/v1/chat/completions" \
 ### File Operations
 
 #### Upload Files
+
 ```bash
 POST /v1/files
 ```
+
 Upload files to S3 storage with metadata extraction.
 
 #### List Files
+
 ```bash
 GET /v1/files
 GET /v1/files?purpose=assistants
 ```
+
 List uploaded files with optional filtering.
 
 #### Get File Metadata
+
 ```bash
 GET /v1/files/{file_id}
 ```
+
 Retrieve file information and metadata.
 
 #### Download File Content
+
 ```bash
 GET /v1/files/{file_id}/content
 ```
+
 Download original file content.
 
 #### Delete Files
+
 ```bash
 DELETE /v1/files/{file_id}
 ```
+
 Remove files from storage.
 
 ### Chat Integration
@@ -233,6 +247,7 @@ Add `file_ids` to any chat completion request to include file content as context
 ```
 
 The system automatically:
+
 1. **Retrieves** file content from S3
 2. **Processes** content based on file type
 3. **Formats** for optimal AI consumption
@@ -257,7 +272,8 @@ AWS_PROFILE=your-aws-profile
 ### File Processing Examples
 
 **CSV Data Processing:**
-```
+
+```ini
 === UPLOADED FILES CONTEXT ===
 
 📄 **File: sales_data.csv** (text/csv, 1.2KB)
@@ -271,7 +287,8 @@ Date,Product,Sales,Revenue
 ```
 
 **JSON Configuration:**
-```
+
+```js
 === UPLOADED FILES CONTEXT ===
 
 📄 **File: config.json** (application/json, 500B)
@@ -314,6 +331,7 @@ Response includes S3 connectivity and credential validation.
 ### Format Examples
 
 **OpenAI Format:**
+
 ```json
 {
   "model": "gpt-4o-mini",
@@ -328,6 +346,7 @@ Response includes S3 connectivity and credential validation.
 ```
 
 **Bedrock Claude Format:**
+
 ```json
 {
   "anthropic_version": "bedrock-2023-05-31",
@@ -340,6 +359,7 @@ Response includes S3 connectivity and credential validation.
 ```
 
 **Bedrock Titan Format:**
+
 ```json
 {
   "model": "amazon.titan-text-express-v1",
@@ -434,7 +454,9 @@ CHAT_API_KEY=your-secret-api-key
 The server supports multiple AWS authentication methods with automatic detection and fallback. Choose the method that best fits your deployment scenario:
 
 #### 1. Static Credentials (Development/Testing)
+
 Direct AWS access keys - simplest but least secure:
+
 ```env
 AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
 AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -446,13 +468,16 @@ AWS_REGION=us-east-1
 **Security:** ⚠️ Store securely, rotate regularly
 
 #### 2. AWS Profile (Local Development)
+
 Uses AWS CLI configured profiles:
+
 ```env
 AWS_PROFILE=your-aws-profile
 AWS_REGION=us-east-1
 ```
 
 **Setup:**
+
 ```bash
 # Configure AWS CLI profile
 aws configure --profile your-aws-profile
@@ -464,7 +489,9 @@ aws configure sso --profile your-aws-profile
 **Security:** ✅ Credentials managed by AWS CLI
 
 #### 3. Role Assumption (Cross-Account/Enhanced Security)
+
 Assume an IAM role using base credentials:
+
 ```env
 # Base credentials (required for role assumption)
 AWS_PROFILE=base-profile
@@ -481,6 +508,7 @@ AWS_REGION=us-east-1
 ```
 
 **Role Trust Policy Example:**
+
 ```json
 {
   "Version": "2012-10-17",
@@ -505,7 +533,9 @@ AWS_REGION=us-east-1
 **Security:** ✅ Time-limited sessions, audit trail, least privilege
 
 #### 4. Web Identity Token (OIDC/Kubernetes)
+
 For containerized environments with OIDC providers:
+
 ```env
 AWS_WEB_IDENTITY_TOKEN_FILE=/var/run/secrets/eks.amazonaws.com/serviceaccount/token
 AWS_ROLE_ARN=arn:aws:iam::123456789012:role/EKSBedrockRole
@@ -514,6 +544,7 @@ AWS_REGION=us-east-1
 ```
 
 **Kubernetes ServiceAccount Example:**
+
 ```yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -527,13 +558,16 @@ metadata:
 **Security:** ✅ No long-term credentials, automatic rotation
 
 #### 5. Instance Profile/Default Chain (Production)
+
 No configuration needed - uses AWS default credential chain:
+
 ```env
 # Only region required
 AWS_REGION=us-east-1
 ```
 
 **Credential Chain Order:**
+
 1. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
 2. Shared credentials file (`~/.aws/credentials`)
 3. Shared config file (`~/.aws/config`)
@@ -548,10 +582,10 @@ AWS_REGION=us-east-1
 
 The server uses this priority order for authentication:
 
-1. **Static Credentials** (`AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`)
-2. **AWS Profile** (`AWS_PROFILE`)
-3. **Role Assumption** (`AWS_ROLE_ARN` with base credentials)
-4. **Web Identity Token** (`AWS_WEB_IDENTITY_TOKEN_FILE`)
+1. __Static Credentials__ (`AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`)
+2. __AWS Profile__ (`AWS_PROFILE`)
+3. __Role Assumption__ (`AWS_ROLE_ARN` with base credentials)
+4. __Web Identity Token__ (`AWS_WEB_IDENTITY_TOKEN_FILE`)
 5. **Default Credential Chain** (instance profiles, etc.)
 
 ### AWS Authentication Troubleshooting
@@ -559,6 +593,7 @@ The server uses this priority order for authentication:
 #### Common Issues and Solutions
 
 **❌ "Role assumption requires base AWS credentials"**
+
 ```bash
 # Problem: AWS_ROLE_ARN set but no base credentials
 # Solution: Add base credentials
@@ -568,6 +603,7 @@ AWS_SECRET_ACCESS_KEY=your-secret
 ```
 
 **❌ "The config profile (profile-name) could not be found"**
+
 ```bash
 # Problem: Profile doesn't exist
 # Solution: Configure the profile
@@ -577,6 +613,7 @@ aws configure list-profiles
 ```
 
 **❌ "Access denied when assuming role"**
+
 ```bash
 # Problem: Role trust policy or permissions issue
 # Solution: Check role trust policy allows your principal
@@ -584,6 +621,7 @@ aws configure list-profiles
 ```
 
 **❌ "Web identity token file not found"**
+
 ```bash
 # Problem: Token file path incorrect
 # Solution: Verify the token file exists
@@ -591,6 +629,7 @@ ls -la /var/run/secrets/eks.amazonaws.com/serviceaccount/token
 ```
 
 **❌ "You must specify a region"**
+
 ```bash
 # Problem: AWS_REGION not set
 # Solution: Set the region
@@ -630,6 +669,7 @@ Your AWS credentials need these minimum permissions for Bedrock:
 ```
 
 For role assumption, also add:
+
 ```json
 {
   "Effect": "Allow",
@@ -654,7 +694,7 @@ bedrock-chat config set --key OPENAI_API_KEY --value sk-your-key
 bedrock-chat config test-aws
 ```
 
-> 📖 **For detailed AWS authentication documentation, see [AWS Authentication Guide](docs/AWS_AUTHENTICATION.md)**
+> 📖 __For detailed AWS authentication documentation, see [AWS Authentication Guide](docs/AWS_AUTHENTICATION.md)__
 
 ## 💡 Usage Examples
 
@@ -907,7 +947,7 @@ The project includes several categories of tests:
 
 - **Unit Tests**: Fast, isolated tests that don't make external API calls
 - **Integration Tests**: Tests that make real API calls to external services
-- **External API Tests**: Tests marked with `external_api` that are skipped in CI
+- __External API Tests__: Tests marked with `external_api` that are skipped in CI
 
 ### Running Tests
 
@@ -944,8 +984,8 @@ uv run pytest tests/utils/ # Utility tests
 
 External API tests require real credentials and are automatically skipped when:
 
-- **OpenAI Tests**: `OPENAI_API_KEY` environment variable is not set
-- **AWS/Bedrock Tests**: AWS authentication is not configured (no `AWS_REGION`, `AWS_PROFILE`, or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`)
+- __OpenAI Tests__: `OPENAI_API_KEY` environment variable is not set
+- __AWS/Bedrock Tests__: AWS authentication is not configured (no `AWS_REGION`, `AWS_PROFILE`, or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`)
 
 #### Setting up OpenAI Integration Tests
 
@@ -979,11 +1019,11 @@ uv run pytest -m "aws_integration"
 
 ### GitHub Actions CI/CD
 
-- **Regular CI**: Runs unit tests only (`pytest -m "not external_api"`)
+- __Regular CI__: Runs unit tests only (`pytest -m "not external_api"`)
 - **Integration Tests**: Manual workflow for running external API tests with credentials
-  - Can be triggered manually from GitHub Actions tab
-  - Supports running OpenAI tests, AWS tests, or both
-  - Uses repository secrets for API keys and credentials
+   - Can be triggered manually from GitHub Actions tab
+   - Supports running OpenAI tests, AWS tests, or both
+   - Uses repository secrets for API keys and credentials
 
 ### Test Coverage
 
@@ -1064,3 +1104,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Open Bedrock Server** - Unifying LLM providers through intelligent format detection and seamless conversion. 🚀
+
+**Cite This Project**
+
+```js
+@software{open-bedrock-server,
+  author = {TeaBranch},
+  title = {open-bedrock-server: Unifying LLM providers through intelligent format detection and seamless conversion},
+  year = {2025},
+  publisher = {GitHub},
+  journal = {GitHub Repository},
+  howpublished = {\url{https://github.com/teabranch/open-bedrock-server}},
+  commit = {use the commit hash you're working with}
+}
+```
