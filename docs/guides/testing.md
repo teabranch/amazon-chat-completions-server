@@ -295,7 +295,7 @@ def test_tool_definition():
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
-from src.open_bedrock_server.main import app
+from src.open_bedrock_server.api.app import app
 
 @pytest.fixture
 def client():
@@ -471,7 +471,7 @@ def test_chat_command(mock_chat_session, runner):
 import pytest
 import asyncio
 from fastapi.testclient import TestClient
-from src.open_bedrock_server.main import app
+from src.open_bedrock_server.api.app import app
 
 @pytest.fixture
 def client():

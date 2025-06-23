@@ -138,15 +138,21 @@ class OpenAIService(AbstractLLMService):
                 f"OpenAI model not found or you do not have access: {model_id}. Detail: {e.message}"
             )
         except APIError as e:
+            # Handle different types of API errors with safe attribute access
+            status_code = getattr(e, 'status_code', None)
+            param = getattr(e, 'param', None)
+            code = getattr(e, 'code', None)
+            message = getattr(e, 'message', str(e))
+            
             logger.error(
-                f"OpenAI API Error: {e} (Model: {model_id}, Status: {e.status_code}, Type: {type(e).__name__})"
+                f"OpenAI API Error: {e} (Model: {model_id}, Status: {status_code}, Type: {type(e).__name__})"
             )
-            if e.status_code == 503:
+            if status_code == 503:
                 raise ServiceUnavailableError(
-                    f"OpenAI service unavailable: {e.message}"
+                    f"OpenAI service unavailable: {message}"
                 )
             raise ServiceApiError(
-                f"OpenAI API error: {e.message} (Status: {e.status_code}, Type: {type(e).__name__}, Param: {e.param}, Code: {e.code})"
+                f"OpenAI API error: {message} (Status: {status_code}, Type: {type(e).__name__}, Param: {param}, Code: {code})"
             )
         except Exception as e:
             logger.error(
@@ -174,15 +180,21 @@ class OpenAIService(AbstractLLMService):
                 f"OpenAI model not found or you do not have access: {model_id}. Detail: {e.message}"
             )
         except APIError as e:
+            # Handle different types of API errors with safe attribute access
+            status_code = getattr(e, 'status_code', None)
+            param = getattr(e, 'param', None)
+            code = getattr(e, 'code', None)
+            message = getattr(e, 'message', str(e))
+            
             logger.error(
-                f"OpenAI API Error: {e} (Model: {model_id}, Status: {e.status_code}, Type: {type(e).__name__})"
+                f"OpenAI API Error: {e} (Model: {model_id}, Status: {status_code}, Type: {type(e).__name__})"
             )
-            if e.status_code == 503:
+            if status_code == 503:
                 raise ServiceUnavailableError(
-                    f"OpenAI service unavailable: {e.message}"
+                    f"OpenAI service unavailable: {message}"
                 )
             raise ServiceApiError(
-                f"OpenAI API error: {e.message} (Status: {e.status_code}, Type: {type(e).__name__}, Param: {e.param}, Code: {e.code})"
+                f"OpenAI API error: {message} (Status: {status_code}, Type: {type(e).__name__}, Param: {param}, Code: {code})"
             )
         except Exception as e:
             logger.error(

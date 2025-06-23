@@ -21,8 +21,7 @@ from ..utils.api_client import (
 from ..utils.config_loader import app_config
 from .base_adapter import BaseLLMAdapter
 
-# To use the async APIClient
-# from ..utils.api_client import get_openai_client, APIClient as AsyncAPIClient
+
 
 logger = logging.getLogger(__name__)
 

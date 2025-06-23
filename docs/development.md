@@ -490,7 +490,7 @@ async def test_chat_completion(openai_service):
 # tests/integration/test_api_integration.py
 import pytest
 from fastapi.testclient import TestClient
-from src.open_bedrock_server.main import app
+from src.open_bedrock_server.api.app import app
 
 @pytest.fixture
 def client():

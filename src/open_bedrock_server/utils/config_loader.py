@@ -255,8 +255,7 @@ class AppConfig:
 # Global instance of AppConfig
 app_config = AppConfig()
 
-# Example of how to use it elsewhere:
-# from .config_loader import app_config
+
 # api_key = app_config.OPENAI_API_KEY
 
 # Assuming this script is in src/open_bedrock_server/utils, .env is two levels up.

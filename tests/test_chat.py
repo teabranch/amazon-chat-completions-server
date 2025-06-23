@@ -15,8 +15,7 @@ from src.open_bedrock_server.core.models import (
     Usage,
 )
 
-# Remove old synchronous TestClient related imports if any are left specifically for it.
-# from fastapi.testclient import TestClient # Should not be needed anymore
+
 
 # Required environment variables with defaults for testing
 # SERVER_API_KEY = os.getenv("API_KEY")
