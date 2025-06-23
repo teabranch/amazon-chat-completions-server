@@ -45,7 +45,7 @@ jobs:
 
     - name: Run integration tests with mocks (safe)
       run: |
-        uv run python run_tests.py --mode integration --verbose
+        uv run pytest -m "integration and not real_api" -v
 
     - name: Run all safe tests
       run: |
