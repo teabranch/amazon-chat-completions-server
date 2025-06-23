@@ -90,7 +90,10 @@ class ChatCompletionRequest(BaseModel):
 
     def model_post_init(self, __context) -> None:
         if not self.messages:
-            raise ValueError("messages must not be empty")
+            raise ValueError(
+                "The 'messages' field must contain at least 1 message. "
+                "Please provide at least one user, assistant, or system message."
+            )
 
         # Validate tool structure
         if self.tools:

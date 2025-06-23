@@ -63,4 +63,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VERSION=dev-${{ github.sha }} 
+            VERSION=0.0.0-dev-${{ github.sha }} 

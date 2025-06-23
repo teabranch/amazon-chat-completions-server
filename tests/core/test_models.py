@@ -106,3 +106,9 @@ def test_invalid_message_role():
 def test_empty_messages_list():
     with pytest.raises(ValueError):
         ChatCompletionRequest(model="test-model", messages=[])
+
+
+def test_empty_messages_validation_error_details():
+    """Test that empty messages validation provides clear error messages"""
+    with pytest.raises(ValueError, match="List should have at least 1 item"):
+        ChatCompletionRequest(model="test-model", messages=[])

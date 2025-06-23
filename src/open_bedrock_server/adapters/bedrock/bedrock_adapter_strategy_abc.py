@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -7,6 +8,8 @@ from ...core.models import (
     ChatCompletionResponse,
     Message,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class BedrockAdapterStrategy(ABC):
@@ -82,6 +85,16 @@ class BedrockAdapterStrategy(ABC):
                 system_prompts.append(content)
             else:
                 processed_messages.append(message)
+
+        # Add validation to prevent empty processed_messages
+        if not processed_messages and system_prompts:
+            logger.warning(
+                f"All messages are system messages for model {self.model_id}. "
+                "Adding a default user message to prevent validation errors."
+            )
+            processed_messages.append(
+                Message(role="user", content="Please provide assistance based on the system instructions.")
+            )
 
         system_prompt = "\n".join(system_prompts) if system_prompts else None
         return system_prompt, processed_messages

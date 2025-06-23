@@ -126,3 +126,20 @@ def test_system_prompt_extraction(claude_strategy):
     assert chat_messages[0].role == "user"
     assert chat_messages[1].role == "assistant"
     assert chat_messages[2].role == "user"
+
+
+def test_system_only_messages_safeguard(claude_strategy):
+    """Test that system-only messages get a default user message added"""
+    messages = [
+        Message(role="system", content="You are a helpful assistant."),
+        Message(role="system", content="Be concise."),
+    ]
+
+    system_prompt, chat_messages = claude_strategy._extract_system_prompt_and_messages(
+        messages
+    )
+
+    assert system_prompt == "You are a helpful assistant.\nBe concise."
+    assert len(chat_messages) == 1  # Default user message should be added
+    assert chat_messages[0].role == "user"
+    assert "assistance" in chat_messages[0].content.lower()

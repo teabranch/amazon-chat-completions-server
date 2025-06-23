@@ -66,6 +66,12 @@ class BedrockToOpenAIAdapter(BaseLLMAdapter):
             )
             messages.append(Message(role=bedrock_msg.role, content=openai_content))
 
+        # Ensure we have at least one message
+        if not messages:
+            # This should not happen with valid Bedrock requests, but add safeguard
+            logger.warning("No messages found in Bedrock Claude request, adding default user message")
+            messages.append(Message(role="user", content="Hello"))
+
         # Convert tools if present
         openai_tools = None
         if claude_request.tools:

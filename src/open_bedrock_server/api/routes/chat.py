@@ -139,15 +139,37 @@ async def unified_chat_completions(
         openai_dto_request: ChatCompletionRequest
         if input_request_format == RequestFormat.OPENAI:
             try:
+                # Add debug logging to help identify empty messages issues
+                messages_data = request_data.get("messages", [])
+                logger.debug(f"Parsing OpenAI request with {len(messages_data)} messages: {messages_data}")
+                
                 openai_dto_request = ChatCompletionRequest(**request_data)
             except ValidationError as e:
                 logger.error(f"Validation error parsing OpenAI request: {e}")
+                logger.error(f"Request data: {request_data}")
+                
+                # Provide more specific error for empty messages
+                if "messages" in str(e) and ("too_short" in str(e) or "must not be empty" in str(e)):
+                    messages_count = len(request_data.get("messages", []))
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={
+                            "error": {
+                                "type": "validation_error",
+                                "message": f"The 'messages' field must contain at least 1 message, but received {messages_count} messages.",
+                                "code": "empty_messages",
+                                "details": str(e)
+                            }
+                        }
+                    )
+                
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Invalid OpenAI request format: {str(e)}",
                 )
             except Exception as e:
                 logger.error(f"Error parsing OpenAI request: {e}")
+                logger.error(f"Request data: {request_data}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid OpenAI request format: {str(e)}",

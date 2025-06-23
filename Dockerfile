@@ -24,8 +24,7 @@ RUN pip install --no-cache-dir uv==0.6.6
 WORKDIR /app
 
 # Accept version as build argument with default fallback
-ARG VERSION=dev
-ENV HATCH_BUILD_NO_VCS=true
+ARG VERSION=0.0.0-dev
 
 # Set the version for setuptools-scm as a fallback
 ENV SETUPTOOLS_SCM_PRETEND_VERSION=${VERSION}
